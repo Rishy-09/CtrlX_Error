@@ -1,47 +1,26 @@
-const express = require('express');
+import express from "express";
+import multer from "multer";
+import { reportBug, getAllBugs, getBugById, updateBug, deleteBug } from "../controllers/bugController.js";
+import authMiddleware from "../middleware/authMiddleware.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";   // imported rbac middlware
+import { getBugHistory } from "../controllers/bugHistoryController.js";
+
 const router = express.Router();
-const Bug = require('../models/Bug');
-const authMiddleware = require('../middleware/authMiddleware'); // Middleware for protected routes
 
-// Create a new bug report (Protected route)
-router.post('/', authMiddleware, async (req, res) => {
-  try {
-    const { title, description, severity, assignee } = req.body;
-    const reporter = req.user.id; // Extract user ID from token
-
-    const bug = new Bug({ title, description, severity, status: 'Open', assignee, reporter });
-    await bug.save();
-
-    res.status(201).json({ message: 'Bug reported successfully', bug });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
+// 🔹 Configure Multer for File Uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
+const upload = multer({ storage });
 
-// Fetch all bugs (Protected route)
-router.get('/', authMiddleware, async (req, res) => {
-  try {
-    const bugs = await Bug.find().populate('reporter', 'name').populate('assignee', 'name');
-    res.status(200).json(bugs);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+// 🔹 Bug Routes
+router.post("/", authMiddleware,  upload.array("attachments", 3), reportBug);  // all users can report bugs
+router.get("/", authMiddleware, getAllBugs);    // all users can view the bugs
+router.get("/:id", authMiddleware, getBugById);   // all  users can view a single bug
+router.get("/:bugId/history", authMiddleware, getBugHistory);   // all users can view the history of a bug
 
-// Update bug status (Protected route)
-router.put('/:id', authMiddleware, async (req, res) => {
-  try {
-    const { status } = req.body;
-    const bug = await Bug.findById(req.params.id);
-    if (!bug) return res.status(404).json({ message: 'Bug not found' });
+router.put("/:id", authMiddleware, roleMiddleware("Admin", "Developer"), updateBug);    // only Admins & Developers can update bugs
+router.delete("/:id", authMiddleware, roleMiddleware("Admin"), deleteBug);     // only admin can delete bugs
 
-    bug.status = status;
-    await bug.save();
-
-    res.status(200).json({ message: 'Bug status updated', bug });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
-
-module.exports = router;
+export default router;
