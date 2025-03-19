@@ -1,13 +1,16 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const bugSchema = mongoose.Schema({
+const BugSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  severity: { type: String, required: true, enum: ['Low', 'Medium', 'High'] },
-  status: { type: String, required: true, enum: ['Open', 'In Progress', 'Resolved', 'Closed'], default: 'Open' },
-  assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  createdAt: { type: Date, default: Date.now },
+  severity: { type: String, enum: ["Low", "Medium", "High", "Critical"], required: true },
+  status: { type: String, enum: ["Open", "In Progress", "Resolved", "Closed"], default: "Open" },
+  assignees: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Multiple assignees
+  reporter: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  priority: { type: String, enum: ["Low", "Medium", "High", "Critical"], default: "Medium" }, // Priority level
+  attachments: [{ type: String }], // Array of file URLs
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Bug', bugSchema);
+const Bug = mongoose.model("Bug", BugSchema);
+export default Bug

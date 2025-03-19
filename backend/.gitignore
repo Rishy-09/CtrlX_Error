@@ -1,2 +1,9 @@
+# ⚙️ Node.js dependencies
 /node_modules
+
+# 🔒 Environment variables (Sensitive Data)
 .env
+
+# 📂 File uploads (Stored locally, should be on cloud storage)
+/uploads
+
