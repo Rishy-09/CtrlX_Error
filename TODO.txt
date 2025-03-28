@@ -1,0 +1,7 @@
+Error in ErrorX
+1. Projects->Create new Project - Error i={value.toString()} at Projects.jsx
+2. Make the code modular 
+    - Routes - separate folder
+
+Features 
+1. 
