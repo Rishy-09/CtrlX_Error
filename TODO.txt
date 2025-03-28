@@ -3,5 +3,14 @@ Error in ErrorX
 2. Make the code modular 
     - Routes - separate folder
 
-Features 
-1. 
+more changes needed
+1. *🔹 Replace Navbar with Sidebar* → Use a *persistent left sidebar* for navigation instead of a top navbar.  
+2. *🔹 Use Split-Screen Layout* → Keep the *bug list on the left, details on the right* instead of switching pages.  
+3. *🔹 Modals & Side Panels Instead of Page Redirects* → Open bug details in a *side panel* or modal instead of loading a new page.  
+4. *🔹 Data Grid Instead of Simple Tables* → Use *Material UI DataGrid* or similar for advanced sorting, filtering, and inline editing.  
+5. *🔹 Real-Time UI Updates* → Use *React Query/WebSockets* to update bugs dynamically without reloading the page.  
+6. *🔹 Drag & Drop for Status Changes* → Allow users to *drag bugs between columns* instead of using dropdowns.  
+7. *🔹 Keyboard Shortcuts & Quick Actions* → Add *Ctrl + K for search, Enter to save*, etc.  
+8. *🔹 Persistent User Preferences* → Save *theme, column order, filters* locally so they persist on reload.  
+9. *🔹 Preload Data & Use Skeleton Loaders* → Ensure UI never shows blank screens while fetching data.  
+10. *🔹 Minimize Navigation, Maximize Interactivity* → Prioritize *click-to-edit, inline updates, and context menus* instead of linking between pages.
