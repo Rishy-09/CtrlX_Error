@@ -1,33 +1,16 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRightIcon, BugAntIcon, ChartBarIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { BugAntIcon, ShieldCheckIcon, BoltIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 export default function LandingPage() {
-  const features = [
-    {
-      name: 'Bug Tracking',
-      description: 'Efficiently track and manage bugs across your projects',
-      icon: BugAntIcon,
-    },
-    {
-      name: 'Team Collaboration',
-      description: 'Work together seamlessly with your development team',
-      icon: UserGroupIcon,
-    },
-    {
-      name: 'Analytics',
-      description: 'Get insights into your project health and team performance',
-      icon: ChartBarIcon,
-    },
-  ];
-
   return (
-    <div className="bg-white">
+    <div className="bg-gradient-to-b from-gray-50 to-white">
+      {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-y-0 h-full w-full" aria-hidden="true">
+        <div className="absolute inset-y-0 w-full h-full">
           <div className="relative h-full">
             <svg
-              className="absolute right-full transform translate-y-1/3 translate-x-1/4 md:translate-y-1/2 sm:translate-x-1/2 lg:translate-x-full"
+              className="absolute right-full transform translate-x-1/4 translate-y-1/4 lg:translate-x-1/2 xl:translate-x-full"
               width={404}
               height={784}
               fill="none"
@@ -35,95 +18,70 @@ export default function LandingPage() {
             >
               <defs>
                 <pattern
-                  id="e229dbec-10e9-49ee-8ec3-0286ca089edf"
+                  id="pattern-1"
                   x={0}
                   y={0}
                   width={20}
                   height={20}
                   patternUnits="userSpaceOnUse"
                 >
-                  <rect x={0} y={0} width={4} height={4} className="text-gray-200" fill="currentColor" />
+                  <rect x={0} y={0} width={4} height={4} className="text-purple-100" fill="currentColor" />
                 </pattern>
               </defs>
-              <rect width={404} height={784} fill="url(#e229dbec-10e9-49ee-8ec3-0286ca089edf)" />
-            </svg>
-            <svg
-              className="absolute left-full transform -translate-y-3/4 -translate-x-1/4 sm:-translate-x-1/2 md:-translate-y-1/2 lg:-translate-x-3/4"
-              width={404}
-              height={784}
-              fill="none"
-              viewBox="0 0 404 784"
-            >
-              <defs>
-                <pattern
-                  id="d2a68204-c383-44b1-b99f-42ccff4e5365"
-                  x={0}
-                  y={0}
-                  width={20}
-                  height={20}
-                  patternUnits="userSpaceOnUse"
-                >
-                  <rect x={0} y={0} width={4} height={4} className="text-gray-200" fill="currentColor" />
-                </pattern>
-              </defs>
-              <rect width={404} height={784} fill="url(#d2a68204-c383-44b1-b99f-42ccff4e5365)" />
+              <rect width={404} height={784} fill="url(#pattern-1)" />
             </svg>
           </div>
         </div>
 
         <div className="relative pt-6 pb-16 sm:pb-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <nav className="relative flex items-center justify-between sm:h-10 md:justify-center" aria-label="Global">
-              <div className="flex flex-1 items-center md:absolute md:inset-y-0 md:left-0">
-                <div className="flex w-full items-center justify-between md:w-auto">
-                  <a href="#">
-                    <span className="sr-only">Bug Tracker</span>
-                    <BugAntIcon className="h-8 w-auto text-primary-600" />
-                  </a>
-                </div>
-              </div>
-              <div className="hidden md:flex md:space-x-10">
-                <a href="#features" className="font-medium text-gray-500 hover:text-gray-900">
-                  Features
-                </a>
-                <a href="#pricing" className="font-medium text-gray-500 hover:text-gray-900">
-                  Pricing
-                </a>
-                <a href="#about" className="font-medium text-gray-500 hover:text-gray-900">
-                  About
-                </a>
-              </div>
-              <div className="hidden md:absolute md:inset-y-0 md:right-0 md:flex md:items-center md:justify-end">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+          <nav className="relative max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6" aria-label="Global">
+            <div className="flex items-center flex-1">
+              <div className="flex items-center justify-between w-full md:w-auto">
+                <motion.div 
+                  className="flex items-center"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
                 >
-                  Log in
-                </Link>
+                  <BugAntIcon className="h-8 w-auto text-purple-600" />
+                  <span className="ml-2 text-2xl font-bold text-gray-900">BugFlow</span>
+                </motion.div>
               </div>
-            </nav>
-          </div>
+            </div>
+            <div className="hidden md:flex md:items-center md:space-x-6">
+              <Link to="/login" className="text-base font-medium text-gray-500 hover:text-gray-900">
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+              >
+                Start free trial
+              </Link>
+            </div>
+          </nav>
 
-          <div className="mx-auto mt-16 max-w-7xl px-4 sm:mt-24 sm:px-6">
+          <div className="mt-16 mx-auto max-w-7xl px-4 sm:mt-24 sm:px-6">
             <div className="text-center">
               <motion.h1
+                className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl"
               >
-                <span className="block">Modern Bug Tracking for</span>
-                <span className="block text-primary-600">Modern Development Teams</span>
+                <span className="block">Transform Your</span>
+                <span className="block text-purple-600">Bug Tracking Experience</span>
               </motion.h1>
               <motion.p
+                className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="mx-auto mt-3 max-w-md text-base text-gray-500 sm:text-lg md:mt-5 md:max-w-3xl md:text-xl"
               >
-                Track, manage, and resolve bugs efficiently. Keep your development process smooth and your team productive.
+                Streamline your development workflow with our powerful bug tracking solution. 
+                Track, manage, and resolve issues efficiently in one collaborative platform.
               </motion.p>
-              <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
+              <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -131,10 +89,9 @@ export default function LandingPage() {
                 >
                   <Link
                     to="/signup"
-                    className="flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-8 py-3 text-base font-medium text-white hover:bg-primary-700 md:py-4 md:px-10 md:text-lg"
+                    className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 md:py-4 md:text-lg md:px-10"
                   >
                     Get started
-                    <ArrowRightIcon className="ml-2 h-5 w-5" />
                   </Link>
                 </motion.div>
               </div>
@@ -142,65 +99,106 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex flex-col" aria-hidden="true">
-            <div className="flex-1" />
-            <div className="w-full flex-1 bg-gray-800" />
-          </div>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <motion.img
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="relative rounded-lg shadow-lg"
-              src="/dashboard-preview.png"
-              alt="App screenshot"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="bg-gray-800 py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl lg:text-center">
+        {/* Features Section */}
+        <div className="relative bg-white py-16 sm:py-24 lg:py-32">
+          <div className="mx-auto max-w-md px-4 text-center sm:max-w-3xl sm:px-6 lg:max-w-7xl lg:px-8">
             <motion.h2
+              className="text-base font-semibold uppercase tracking-wider text-purple-600"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-base font-semibold leading-7 text-primary-600"
             >
-              Powerful Features
+              Everything you need
             </motion.h2>
             <motion.p
+              className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight sm:text-4xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl"
             >
-              Everything you need to manage bugs effectively
+              Built for modern development teams
             </motion.p>
+
+            <div className="mt-12">
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {features.map((feature, index) => (
+                  <motion.div
+                    key={feature.name}
+                    className="pt-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                  >
+                    <div className="flow-root bg-gray-50 rounded-lg px-6 pb-8">
+                      <div className="-mt-6">
+                        <div>
+                          <span className="inline-flex items-center justify-center p-3 bg-purple-600 rounded-md shadow-lg">
+                            <feature.icon className="h-6 w-6 text-white" aria-hidden="true" />
+                          </span>
+                        </div>
+                        <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">{feature.name}</h3>
+                        <p className="mt-5 text-base text-gray-500">{feature.description}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-            <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={feature.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + index * 0.1 }}
-                  className="flex flex-col"
-                >
-                  <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-white">
-                    <feature.icon className="h-5 w-5 flex-none text-primary-600" aria-hidden="true" />
-                    {feature.name}
-                  </dt>
-                  <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-300">
-                    <p className="flex-auto">{feature.description}</p>
-                  </dd>
-                </motion.div>
-              ))}
-            </dl>
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-purple-700">
+          <div className="max-w-2xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
+            <motion.h2
+              className="text-3xl font-extrabold text-white sm:text-4xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <span className="block">Ready to dive in?</span>
+              <span className="block">Start your free trial today.</span>
+            </motion.h2>
+            <motion.p
+              className="mt-4 text-lg leading-6 text-purple-200"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              Join thousands of teams already using BugFlow to improve their development workflow.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8 w-full sm:flex sm:justify-center"
+            >
+              <Link
+                to="/signup"
+                className="bg-white text-purple-600 hover:bg-purple-50 px-8 py-3 rounded-md font-medium inline-flex items-center"
+              >
+                Start free trial
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+const features = [
+  {
+    name: 'Real-time Collaboration',
+    description: 'Work together seamlessly with your team. Get instant updates and notifications as changes happen.',
+    icon: BoltIcon,
+  },
+  {
+    name: 'Advanced Security',
+    description: 'Enterprise-grade security with role-based access control and audit logs.',
+    icon: ShieldCheckIcon,
+  },
+  {
+    name: 'Powerful Analytics',
+    description: 'Gain insights into your project health with detailed reports and dashboards.',
+    icon: ChartBarIcon,
+  },
+];
