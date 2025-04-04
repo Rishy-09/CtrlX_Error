@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import NotificationSidebar from './NotificationSidebar';
+import useNotificationStore from '../store/notificationStore';
 
 export default function Header({ userRole, setUserRole }) {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const { notifications } = useNotificationStore();
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="bg-white shadow-sm">
@@ -45,14 +50,22 @@ export default function Header({ userRole, setUserRole }) {
               <option value="tester">Tester</option>
             </select>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <span className="sr-only">View notifications</span>
-              <BellIcon className="h-6 w-6" aria-hidden="true" />
-            </motion.button>
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                onClick={() => setIsNotificationOpen(true)}
+              >
+                <span className="sr-only">View notifications</span>
+                <BellIcon className="h-6 w-6" aria-hidden="true" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-500 text-xs font-medium text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </motion.button>
+            </div>
 
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -72,6 +85,11 @@ export default function Header({ userRole, setUserRole }) {
           </div>
         </div>
       </div>
+
+      <NotificationSidebar
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+      />
     </header>
   );
 }

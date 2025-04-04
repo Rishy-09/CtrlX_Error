@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { PlusIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import Modal from '../components/common/Modal';
 
 export default function Projects() {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -167,172 +168,144 @@ export default function Projects() {
       </div>
 
       {/* New Project Modal */}
-      {showNewProjectModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setShowNewProjectModal(false)}></div>
-            </div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6"
-            >
-              <form onSubmit={handleCreateProject}>
-                <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Create New Project</h3>
-                  <div className="mt-2 space-y-6">
-                    <div>
-                      <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">Project Name</label>
-                      <input
-                        type="text"
-                        id="project-name"
-                        required
-                        value={newProject.name}
-                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                      <textarea
-                        id="description"
-                        rows={3}
-                        required
-                        value={newProject.description}
-                        onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
-                      <input
-                        type="date"
-                        id="start-date"
-                        required
-                        value={newProject.startDate}
-                        onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
-                      <input
-                        type="date"
-                        id="end-date"
-                        required
-                        value={newProject.endDate}
-                        onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-5 sm:mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProjectModal(false)}
-                    className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                  >
-                    Create Project
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+      <Modal
+        isOpen={showNewProjectModal}
+        onClose={() => setShowNewProjectModal(false)}
+        title="Create New Project"
+      >
+        <form onSubmit={handleCreateProject} className="space-y-6">
+          <div>
+            <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">
+              Project Name
+            </label>
+            <input
+              type="text"
+              id="project-name"
+              required
+              value={newProject.name}
+              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              id="description"
+              rows={3}
+              required
+              value={newProject.description}
+              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">
+              Start Date
+            </label>
+            <input
+              type="date"
+              id="start-date"
+              required
+              value={newProject.startDate}
+              onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="end-date"
+              required
+              value={newProject.endDate}
+              onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm"
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowNewProjectModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            >
+              Create Project
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Project Details Modal */}
-      {showProjectDetails && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setShowProjectDetails(null)}></div>
+      <Modal
+        isOpen={!!showProjectDetails}
+        onClose={() => setShowProjectDetails(null)}
+        title={showProjectDetails?.name}
+      >
+        {showProjectDetails && (
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Description</h4>
+              <p className="mt-2 text-sm text-gray-500">{showProjectDetails.description}</p>
             </div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6"
-            >
-              <div className="sm:flex sm:items-start">
-                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {showProjectDetails.name}
-                  </h3>
-                  <div className="mt-4">
-                    <p className="text-sm text-gray-500">
-                      {showProjectDetails.description}
-                    </p>
-                  </div>
 
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-900">Team Members</h4>
-                    <div className="mt-2 flex -space-x-2">
-                      {showProjectDetails.members.map((member, i) => (
-                        <img
-                          key={i}
-                          className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                          src={member}
-                          alt=""
-                        />
-                      ))}
-                    </div>
-                  </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Team Members</h4>
+              <div className="mt-2 flex -space-x-2">
+                {showProjectDetails.members.map((member, i) => (
+                  <img
+                    key={i}
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
+                    src={member}
+                    alt=""
+                  />
+                ))}
+              </div>
+            </div>
 
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-900">Progress</h4>
-                    <div className="mt-2">
-                      <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${showProjectDetails.progress}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500"
-                        />
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">{showProjectDetails.progress}% Complete</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-900">Statistics</h4>
-                    <dl className="mt-2 grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <dt className="text-sm font-medium text-gray-500">Total Bugs</dt>
-                        <dd className="mt-1 text-lg font-semibold text-gray-900">{showProjectDetails.stats.totalBugs}</dd>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <dt className="text-sm font-medium text-gray-500">Open Bugs</dt>
-                        <dd className="mt-1 text-lg font-semibold text-gray-900">{showProjectDetails.stats.openBugs}</dd>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <dt className="text-sm font-medium text-gray-500">Critical Bugs</dt>
-                        <dd className="mt-1 text-lg font-semibold text-red-600">{showProjectDetails.stats.criticalBugs}</dd>
-                      </div>
-                    </dl>
-                  </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Progress</h4>
+              <div className="mt-2">
+                <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${showProjectDetails.progress}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500"
+                  />
                 </div>
+                <p className="mt-1 text-sm text-gray-500">{showProjectDetails.progress}% Complete</p>
               </div>
-              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:mt-0 sm:w-auto sm:text-sm"
-                  onClick={() => setShowProjectDetails(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Statistics</h4>
+              <dl className="mt-2 grid grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <dt className="text-sm font-medium text-gray-500">Total Bugs</dt>
+                  <dd className="mt-1 text-lg font-semibold text-gray-900">{showProjectDetails.stats.totalBugs}</dd>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <dt className="text-sm font-medium text-gray-500">Open Bugs</dt>
+                  <dd className="mt-1 text-lg font-semibold text-gray-900">{showProjectDetails.stats.openBugs}</dd>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <dt className="text-sm font-medium text-gray-500">Critical Bugs</dt>
+                  <dd className="mt-1 text-lg font-semibold text-red-600">{showProjectDetails.stats.criticalBugs}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 import AppRoutes from './routes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -18,6 +19,7 @@ function App() {
             setIsAuthenticated={setIsAuthenticated} 
           />
         </AnimatePresence>
+        <Toaster position="top-right" />
       </Router>
     </QueryClientProvider>
   );
