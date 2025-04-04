@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import Modal from '../components/common/Modal';
+import CommentSection from '../components/CommentSection';
 
 const issueStatuses = ['Unsolved', 'In Progress', 'Solved'];
 
@@ -22,6 +24,8 @@ const initialIssues = {
 export default function Issues() {
   const [issues, setIssues] = useState(initialIssues);
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [currentUser] = useState('John Doe'); // In a real app, this would come from auth context
+  const [currentRole] = useState('Developer'); // In a real app, this would come from auth context
 
   const onDragEnd = (result) => {
     const { source, destination } = result;
@@ -109,76 +113,39 @@ export default function Issues() {
       </div>
 
       {/* Issue Details Modal */}
-      {selectedIssue && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setSelectedIssue(null)}></div>
+      <Modal
+        isOpen={!!selectedIssue}
+        onClose={() => setSelectedIssue(null)}
+        title={selectedIssue?.title}
+      >
+        {selectedIssue && (
+          <div className="space-y-6">
+            <div>
+              <div className="flex space-x-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  selectedIssue.priority === 'Critical' ? 'bg-red-100 text-red-800' :
+                  selectedIssue.priority === 'High' ? 'bg-orange-100 text-orange-800' :
+                  selectedIssue.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {selectedIssue.priority}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  {selectedIssue.type}
+                </span>
+              </div>
+              <p className="mt-4 text-sm text-gray-500">{selectedIssue.description}</p>
             </div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6"
-            >
-              <div className="absolute top-0 right-0 pt-4 pr-4">
-                <button
-                  type="button"
-                  className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                  onClick={() => setSelectedIssue(null)}
-                >
-                  <span className="sr-only">Close</span>
-                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-              <div className="sm:flex sm:items-start">
-                <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {selectedIssue.title}
-                  </h3>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">
-                      {selectedIssue.description}
-                    </p>
-                  </div>
-                  <div className="mt-4 flex space-x-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      selectedIssue.priority === 'Critical' ? 'bg-red-100 text-red-800' :
-                      selectedIssue.priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                      selectedIssue.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {selectedIssue.priority}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {selectedIssue.type}
-                    </span>
-                  </div>
 
-                  {/* Comments Section */}
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium text-gray-900">Comments</h4>
-                    <div className="mt-2">
-                      <textarea
-                        rows={3}
-                        className="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        placeholder="Add a comment..."
-                      />
-                      <div className="mt-2 flex justify-end">
-                        <button
-                          type="button"
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                        >
-                          Comment
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            {/* Comments Section */}
+            <CommentSection
+              issueId={selectedIssue.id}
+              currentUser={currentUser}
+              currentRole={currentRole}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </motion.div>
   );
 }
