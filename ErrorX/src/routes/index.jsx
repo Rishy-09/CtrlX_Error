@@ -13,6 +13,8 @@ import Settings from '../pages/Settings';
 import Pricing from '../pages/Pricing';
 import About from '../pages/About';
 import Layout from '../components/Layout';
+import BugList from '../pages/BugList';
+import Bug from '../../../backend/models/Bug';
 
 export default function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
   const [userRole, setUserRole] = useState('admin');
@@ -110,6 +112,7 @@ export default function AppRoutes({ isAuthenticated, setIsAuthenticated }) {
 
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/buglist" element={<BugList />} />
     </Routes>
   );
 }
