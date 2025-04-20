@@ -6,6 +6,11 @@ export const API_PATHS = {
         REGISTER: "/api/auth/register", // Register a new user (Admin or member)
         LOGIN: "/api/auth/login", // Authenticate user & return JWT token
         GET_PROFILE: "/api/auth/profile", // Get logged-in user details
+        UPDATE_PROFILE: "/api/auth/profile",
+        FORGOT_PASSWORD: "/api/auth/forgot-password",
+        RESET_PASSWORD: "/api/auth/reset-password",
+        VERIFY_EMAIL: "/api/auth/verify-email",
+        RESEND_VERIFICATION: "/api/auth/resend-verification"
     },
 
     USERS: {
@@ -99,5 +104,11 @@ export const API_PATHS = {
     ATTACHMENTS: {
         DOWNLOAD: (attachmentId) => `/api/attachments/download/${attachmentId}`, // Download an attachment
         DELETE: (attachmentId) => `/api/attachments/${attachmentId}`, // Delete an attachment
-    }
+    },
+
+    EMAIL: {
+        SEND_NOTIFICATION: "/api/email/send-notification",
+        SEND_INVITE: "/api/email/send-invite",
+        SUBSCRIBE_NEWSLETTER: "/api/email/subscribe"
+    },
 };
