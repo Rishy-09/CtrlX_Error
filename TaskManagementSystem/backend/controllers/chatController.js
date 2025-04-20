@@ -250,76 +250,112 @@ const deleteChat = asyncHandler(async (req, res) => {
 // @route   POST /api/chats/:id/messages
 // @access  Private
 const sendMessage = asyncHandler(async (req, res) => {
-  const { content, mentions, replyTo, attachments } = req.body;
-  
-  if (!content || content.trim() === "") {
-    res.status(400);
-    throw new Error("Message content is required");
-  }
-  
-  const chat = await Chat.findById(req.params.id);
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is a participant
-  if (!chat.participants.includes(req.user._id)) {
-    res.status(403);
-    throw new Error("You are not a participant in this chat");
-  }
-  
-  // Validate reply if provided
-  if (replyTo) {
-    const replyExists = await Message.findOne({ 
-      _id: replyTo,
-      chat: chat._id
+  try {
+    const { content } = req.body;
+    const mentions = req.body.mentions || [];
+    const replyTo = req.body.replyTo;
+    
+    // Check if content exists and is not just whitespace when no attachments are provided
+    if ((!content || content.trim() === "") && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({
+        message: "Message content or attachment is required"
+      });
+    }
+    
+    const chat = await Chat.findById(req.params.id);
+    
+    if (!chat) {
+      return res.status(404).json({
+        message: "Chat not found"
+      });
+    }
+    
+    // Check if user is a participant
+    if (!chat.participants.some(p => p.toString() === req.user._id.toString())) {
+      return res.status(403).json({
+        message: "You are not a participant in this chat"
+      });
+    }
+    
+    // Validate reply if provided
+    if (replyTo) {
+      const replyExists = await Message.findOne({ 
+        _id: replyTo,
+        chat: chat._id
+      });
+      
+      if (!replyExists) {
+        return res.status(404).json({
+          message: "Reply message not found in this chat"
+        });
+      }
+    }
+    
+    // Process attachments if any
+    let attachmentIds = [];
+    if (req.files && req.files.length > 0) {
+      const attachmentPromises = req.files.map(async (file) => {
+        const attachment = await Attachment.create({
+          filename: file.filename,
+          originalFilename: file.originalname,
+          path: file.path,
+          mimetype: file.mimetype,
+          size: file.size,
+          uploadedBy: req.user._id
+        });
+        return attachment._id;
+      });
+      
+      attachmentIds = await Promise.all(attachmentPromises);
+    }
+    
+    // Create message
+    const message = await Message.create({
+      chat: chat._id,
+      sender: req.user._id,
+      content: content || "",
+      attachments: attachmentIds,
+      mentions: mentions,
+      readBy: [{ user: req.user._id }], // Mark as read by sender
+      replyTo: replyTo || null
     });
     
-    if (!replyExists) {
-      res.status(404);
-      throw new Error("Reply message not found in this chat");
+    // Populate message
+    const populatedMessage = await Message.findById(message._id)
+      .populate("sender", "name email profileImageURL")
+      .populate("mentions", "name email profileImageURL")
+      .populate({
+        path: "replyTo",
+        populate: {
+          path: "sender",
+          select: "name profileImageURL"
+        }
+      })
+      .populate({
+        path: "attachments",
+        select: "filename originalFilename mimetype size"
+      });
+    
+    // Update chat's updatedAt
+    chat.updatedAt = Date.now();
+    await chat.save();
+    
+    // If AI assistant is enabled, generate response asynchronously
+    if (chat.aiAssistant && chat.aiAssistant.enabled) {
+      // Don't await this - let it run in the background
+      generateAIResponse(chat, populatedMessage).catch(err => 
+        console.error('Error generating AI response:', err)
+      );
     }
-  }
-  
-  // Create message
-  const message = await Message.create({
-    chat: chat._id,
-    sender: req.user._id,
-    content,
-    attachments: attachments || [],
-    mentions: mentions || [],
-    readBy: [{ user: req.user._id }], // Mark as read by sender
-    replyTo: replyTo || null
-  });
-  
-  // Populate message
-  const populatedMessage = await Message.findById(message._id)
-    .populate("sender", "name email profileImageURL")
-    .populate("mentions", "name email profileImageURL")
-    .populate({
-      path: "replyTo",
-      populate: {
-        path: "sender",
-        select: "name profileImageURL"
-      }
-    })
-    .populate({
-      path: "attachments",
-      select: "filename originalFilename mimetype size"
+    
+    res.status(201).json(populatedMessage);
+  } catch (error) {
+    console.error('Error in sendMessage controller:', error);
+    res.status(500).json({
+      message: "Failed to send message",
+      error: error.message
     });
-  
-  // Update chat's updatedAt
-  chat.updatedAt = Date.now();
-  await chat.save();
-  
-  // If AI assistant is enabled, generate response
-  if (chat.aiAssistant && chat.aiAssistant.enabled) {
-    generateAIResponse(chat, populatedMessage);
   }
-  
-  res.status(201).json(populatedMessage);
 });
 
 // @desc    Get messages for a chat

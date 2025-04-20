@@ -6,9 +6,9 @@ import Input from '../../components/Inputs/Input.jsx'
 import ProfilePhotoSelector from "../../components/Inputs/ProfilePhotoSelector.jsx"
 import { API_PATHS } from '../../utils/apiPaths.js'
 import { UserContext } from "../../context/userContext.jsx";
-import  uploadImage from '../../utils/uploadImage.js'
+import uploadImage from '../../utils/uploadImage.js'
 import axiosInstance from '../../utils/axiosInstance.js'
-
+import { toast } from 'react-hot-toast'
 
 const Signup = () => {
   const [profilePic, setProfilePic] = useState(null);
@@ -16,6 +16,7 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [adminInviteToken, setAdminInviteToken] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [error, setError] = useState(null);
 
@@ -24,46 +25,66 @@ const Signup = () => {
   // Handle Signup Form Submit 
   const handleSignUp = async (e) => {
       e.preventDefault();
+      setLoading(true);
 
-      let profileImageUrl = '';
-      if (!fullName){
-        setError("Please enter full name");
-        return;
-      }
-
-      if (!validateEmail(email)){
-        setError("Please enter a valid email address");
-        return;
-      }
-
-
-      if (!password ){
-        setError("Please enter the password");
-        return;
-      }
-
-      setError("");
-
-      // SignUp API Call
       try {
+        // Validation checks
+        if (!fullName){
+          setError("Please enter full name");
+          setLoading(false);
+          return;
+        }
+
+        if (!validateEmail(email)){
+          setError("Please enter a valid email address");
+          setLoading(false);
+          return;
+        }
+
+        if (!password){
+          setError("Please enter the password");
+          setLoading(false);
+          return;
+        }
+
+        if (password.length < 6) {
+          setError("Password must be at least 6 characters");
+          setLoading(false);
+          return;
+        }
+
+        setError("");
 
         // Upload image if present
+        let profileImageURL = '';
         if (profilePic) {
-          const imgUploadRes = await uploadImage(profilePic);
-          profileImageUrl = imgUploadRes.imageUrl || "";
+          try {
+            const imgUploadRes = await uploadImage(profilePic);
+            profileImageURL = imgUploadRes.imageURL || "";
+          } catch (uploadError) {
+            console.error("Error uploading profile image:", uploadError);
+            // Continue registration without profile image if upload fails
+            toast.error("Failed to upload profile image, continuing without it");
+          }
         }
+
+        // Registration API Call
         const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
           name: fullName,
           email,
           password,
-          profileImageUrl,
-          adminInviteToken,
+          profileImageURL,
+          adminInviteToken: adminInviteToken || undefined,
         });
 
         const { token, role } = response.data;
         if (token) {
           localStorage.setItem("token", token); // Store token in local storage
           updateUser(response.data); // Update user context
+          
+          // Show success message
+          toast.success('Account created successfully!');
+          
           // Redirect based on role
           if (role === "admin") {
             navigate("/admin/dashboard");
@@ -74,12 +95,16 @@ const Signup = () => {
         }
       }
       catch (error) {
-        if (error.response && error.response.data.message) {
+        console.error("Registration error:", error);
+        if (error.response && error.response.data && error.response.data.message) {
           setError(error.response.data.message);
         }
         else {
-          setError ("Something went wrong. Please try again")
+          setError("Something went wrong. Please try again");
         }
+      }
+      finally {
+        setLoading(false);
       }
   };
   
@@ -93,7 +118,7 @@ const Signup = () => {
         </p>
 
         <form onSubmit={handleSignUp}>
-          <ProfilePhotoSelector image = {profilePic} setImage={setProfilePic} />
+          <ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 
             <Input
@@ -103,40 +128,48 @@ const Signup = () => {
               placeholder="John"
               type="text"
               autoComplete="name"
+              required
             />
 
             <Input
-                  value={email}
-                  onChange={({target}) => setEmail(target.value)}
-                  label="Email Address"
-                  placeholder="example@gmail.com"
-                  type="text"
-                  autoComplete="username"
+              value={email}
+              onChange={({target}) => setEmail(target.value)}
+              label="Email Address"
+              placeholder="example@gmail.com"
+              type="email"
+              autoComplete="username"
+              required
             />
             <Input
-                value={password}
-                onChange={({target}) => setPassword(target.value)}
-                label="Password"
-                placeholder="Min 8 characters"
-                type="password"
-                autoComplete="current-password"
+              value={password}
+              onChange={({target}) => setPassword(target.value)}
+              label="Password"
+              placeholder="Min 6 characters"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={6}
             />
 
             <Input
-                value={ adminInviteToken}
-                onChange={({target}) => setAdminInviteToken(target.value)}
-                label="Admin Invite Token"
-                placeholder="6 Digit Code"
-                type="text"
+              value={adminInviteToken}
+              onChange={({target}) => setAdminInviteToken(target.value)}
+              label="Admin Invite Token (Optional)"
+              placeholder="6 Digit Code"
+              type="text"
             />
           </div>
           {error && <p className='text-red-500 text-xs pb-2.5 mt-2'>{error}</p>}
 
-          <button type="submit" className='btn-primary'>
-            SIGNUP
+          <button 
+            type="submit" 
+            className={`btn-primary w-full mt-4 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            disabled={loading}
+          >
+            {loading ? 'CREATING ACCOUNT...' : 'SIGN UP'}
           </button>
           <p className="text-[13px] text-slate-800 mt-3">
-            Already have an account?{""}
+            Already have an account?{" "}
             <Link className="font-medium text-primary underline" to="/login">
               Login
             </Link>
