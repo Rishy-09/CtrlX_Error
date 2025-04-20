@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../../context/ChatContext';
-import { useContext } from 'react';
 import { UserContext } from '../../context/userContext';
+import { toast } from 'react-hot-toast';
 import { MdArrowBack } from 'react-icons/md';
 import { FaRobot } from 'react-icons/fa';
 import { BsThreeDotsVertical } from 'react-icons/bs';
@@ -14,6 +14,7 @@ import ChatInput from './components/ChatInput';
 
 const ChatPage = () => {
   const { chatId } = useParams();
+  const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const {
     chats,
@@ -21,6 +22,7 @@ const ChatPage = () => {
     messages,
     loading,
     messagesLoading,
+    sendingMessage,
     fetchChats,
     fetchChatById,
     fetchMessages,
@@ -29,27 +31,84 @@ const ChatPage = () => {
     clearActiveChat
   } = useChat();
   
-  const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   
-  // Load chat data
+  // Fetch active chat when chatId changes
   useEffect(() => {
-    if (chatId) {
-      fetchChatById(chatId);
-      fetchMessages(chatId);
-    } else {
-      clearActiveChat();
+    let isActive = true; // For cleanup/cancellation
+    
+    const loadChat = async () => {
+      if (chatId) {
+        const chat = await fetchChatById(chatId);
+        // Only update state if component is still mounted
+        if (isActive && !chat) {
+          toast.error('Chat not found or you do not have access');
+          navigate('/user/chat');
+        }
+      } else if (isActive) {
+        clearActiveChat();
+      }
+    };
+    
+    loadChat();
+    
+    // Cleanup function
+    return () => {
+      isActive = false;
+      // No need to call clearActiveChat here
+    };
+  }, [chatId, fetchChatById, navigate, clearActiveChat]);
+  
+  // Fetch messages when active chat changes
+  useEffect(() => {
+    if (activeChat) {
+      fetchMessages(activeChat._id);
+      setHasScrolledToBottom(false);
     }
-  }, [chatId]);
+  }, [activeChat, fetchMessages]);
   
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messages.length > 0 && messagesEndRef.current && !hasScrolledToBottom) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setHasScrolledToBottom(true);
     }
-  }, [messages]);
+  }, [messages, hasScrolledToBottom]);
+  
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0 && messagesEndRef.current && hasScrolledToBottom) {
+      const isScrolledToBottom = messagesContainerRef.current && 
+        (messagesContainerRef.current.scrollHeight - messagesContainerRef.current.scrollTop - messagesContainerRef.current.clientHeight < 100);
+      
+      if (isScrolledToBottom || sendingMessage) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages, sendingMessage, hasScrolledToBottom]);
+  
+  // Check for new messages and AI responses periodically
+  useEffect(() => {
+    if (activeChat && activeChat._id) {
+      // Initial fetch only if we don't have messages already
+      if (messages.length === 0) {
+        fetchMessages(activeChat._id);
+      }
+      
+      // Set up polling for new messages - especially important for AI responses
+      const interval = setInterval(() => {
+        if (activeChat.aiAssistant?.enabled) {
+          fetchMessages(activeChat._id);
+        }
+      }, 5000); // Poll every 5 seconds - only if AI is enabled
+      
+      return () => clearInterval(interval);
+    }
+  }, [activeChat, fetchMessages, messages.length]);
   
   // Handle sending a message
   const handleSendMessage = async (messageData) => {
@@ -57,8 +116,17 @@ const ChatPage = () => {
     
     try {
       await sendMessage(chatId, messageData);
+      
+      // If AI assistant is enabled, automatically fetch messages again after a delay
+      // to show the AI response
+      if (activeChat?.aiAssistant?.enabled) {
+        setTimeout(() => {
+          fetchMessages(chatId);
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Error is already handled in ChatContext
     }
   };
   
@@ -135,13 +203,22 @@ const ChatPage = () => {
     }
     
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+        style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 160px)' }}
+      >
         {messages.map((message) => (
           <MessageItem 
             key={message._id} 
             message={message} 
-            isCurrentUser={message.sender._id === user._id}
-            isAI={message.isAIMessage}
+            isCurrentUser={message.sender._id === user?._id}
+            isAI={message.isAIMessage || message.sender.isAI}
+            onReply={(replyMessage) => {
+              // Scroll message input into view and focus it
+              document.querySelector('.message-input')?.focus();
+              // You could also add functionality to show which message is being replied to
+            }}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -167,7 +244,7 @@ const ChatPage = () => {
             {renderMessages()}
             <ChatInput 
               onSendMessage={handleSendMessage} 
-              disabled={loading || !activeChat}
+              disabled={loading || !activeChat || sendingMessage}
             />
           </>
         ) : (
