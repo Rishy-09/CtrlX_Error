@@ -5,6 +5,7 @@ import Dashboard from "./pages/Admin/Dashboard.jsx";
 import { Navigate } from "react-router-dom";
 import Login from "./pages/Auth/Login.jsx";
 import SignUp from "./pages/Auth/Signup.jsx";
+import LandingPage from "./pages/Landing/LandingPage.jsx";
 
 import ManageTasks from "./pages/Admin/ManageTasks.jsx";
 import CreateTask from "./pages/Admin/CreateTask.jsx";
@@ -30,6 +31,7 @@ const App = () => {
             <Routes>
               <Route path="/login" element={<Login/>} />
               <Route path="/signUp" element={<SignUp/>} />
+              <Route path="/landing" element={<LandingPage />} />
 
               {/*Admin Routes*/}
               <Route element={<PrivateRoute allowedRoles={["admin"]}/>}>
@@ -51,7 +53,7 @@ const App = () => {
               </Route>
 
               {/*Default Route*/}
-              <Route path="/" element={<Root/>} />
+              <Route path="/" element={<Navigate to="/landing" />} />
 
             </Routes>
           </Router>
@@ -78,7 +80,7 @@ const Root = () => {
   if (loading) return <Outlet/>;
 
   if (!user){
-    return <Navigate to="/login" />;
+    return <Navigate to="/landing" />;
   }
 
   return user.role === "admin" ? <Navigate to="/admin/dashboard" /> : <Navigate to="/user/dashboard" />;

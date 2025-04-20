@@ -1,154 +1,149 @@
 import React, { useState, useRef } from 'react';
-import { IoSendSharp } from 'react-icons/io5';
-import { BsEmojiSmile, BsPaperclip } from 'react-icons/bs';
-import EmojiPicker from 'emoji-picker-react';
+import { FiSend, FiPaperclip, FiX } from 'react-icons/fi';
+import TextareaAutosize from 'react-textarea-autosize';
+import { toast } from 'react-toastify';
 
 const ChatInput = ({ onSendMessage, disabled }) => {
-  const [messageText, setMessageText] = useState('');
+  const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  const emojiPickerRef = useRef(null);
-  
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (!messageText.trim() && attachments.length === 0) return;
-    
-    onSendMessage({
-      content: messageText,
-      attachments
-    });
-    
-    // Clear form
-    setMessageText('');
-    setAttachments([]);
-    setShowEmojiPicker(false);
-  };
-  
-  // Handle file selection
-  const handleFileChange = (e) => {
-    if (e.target.files) {
-      setAttachments(Array.from(e.target.files));
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
-  
-  // Open file picker
-  const openFilePicker = () => {
+
+  const handleSendMessage = () => {
+    if ((!message.trim() && attachments.length === 0) || isUploading || disabled) return;
+    
+    onSendMessage({
+      content: message.trim(),
+      attachments: attachments
+    });
+    
+    setMessage('');
+    setAttachments([]);
+  };
+
+  const handleAttachmentClick = () => {
     fileInputRef.current?.click();
   };
-  
-  // Remove attachment
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    if (files.length + attachments.length > 5) {
+      toast.error("You can only upload up to 5 files at once");
+      return;
+    }
+    
+    // Check each file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+      toast.error(`${invalidFiles.length} file(s) exceed the 10MB limit`);
+      return;
+    }
+    
+    setIsUploading(true);
+    
+    // Convert to the format expected by the API
+    const newAttachments = files.map(file => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+    
+    setAttachments([...attachments, ...newAttachments]);
+    setIsUploading(false);
+    
+    // Reset the file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const removeAttachment = (index) => {
-    setAttachments(attachments.filter((_, i) => i !== index));
+    const newAttachments = [...attachments];
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(newAttachments[index].previewUrl);
+    newAttachments.splice(index, 1);
+    setAttachments(newAttachments);
   };
-  
-  // Add emoji to message
-  const handleEmojiClick = (emojiData) => {
-    setMessageText(prev => prev + emojiData.emoji);
-  };
-  
-  // Toggle emoji picker
-  const toggleEmojiPicker = () => {
-    setShowEmojiPicker(!showEmojiPicker);
-  };
-  
-  // Close emoji picker when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
-        setShowEmojiPicker(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-  
-  // Attachment previews
-  const renderAttachmentPreviews = () => {
-    if (attachments.length === 0) return null;
-    
-    return (
-      <div className="px-4 py-2 border-t border-gray-200">
-        <div className="flex flex-wrap gap-2">
-          {attachments.map((file, index) => (
+
+  return (
+    <div className="border-t p-3">
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {attachments.map((attachment, index) => (
             <div 
               key={index} 
-              className="relative bg-gray-100 rounded p-2 text-xs flex items-center"
+              className="relative bg-gray-100 rounded p-2 flex items-center gap-2"
             >
-              <span className="truncate max-w-[100px]">{file.name}</span>
-              <button 
-                className="ml-1 text-red-500 font-bold"
+              <span className="text-xs truncate max-w-[150px]">
+                {attachment.name}
+              </span>
+              <button
                 onClick={() => removeAttachment(index)}
+                className="text-gray-600 hover:text-red-500"
               >
-                ×
+                <FiX size={16} />
               </button>
             </div>
           ))}
         </div>
-      </div>
-    );
-  };
-  
-  return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4 bg-white">
-      {renderAttachmentPreviews()}
+      )}
       
-      <div className="flex items-center relative">
-        <button 
-          type="button" 
-          className="p-2 rounded-full text-gray-500 hover:text-gray-700"
-          onClick={toggleEmojiPicker}
+      <div className="flex items-end gap-2">
+        <button
+          onClick={handleAttachmentClick}
+          disabled={disabled || attachments.length >= 5}
+          className="text-gray-500 hover:text-blue-500 disabled:opacity-50 p-2"
+          title="Attach file"
         >
-          <BsEmojiSmile size={20} />
-        </button>
-        
-        {showEmojiPicker && (
-          <div 
-            ref={emojiPickerRef}
-            className="absolute bottom-14 left-0 z-10"
-          >
-            <EmojiPicker onEmojiClick={handleEmojiClick} />
-          </div>
-        )}
-        
-        <button 
-          type="button" 
-          className="p-2 rounded-full text-gray-500 hover:text-gray-700"
-          onClick={openFilePicker}
-        >
-          <BsPaperclip size={20} />
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            onChange={handleFileChange} 
-            multiple
-          />
+          <FiPaperclip size={20} />
         </button>
         
         <input
-          type="text"
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-full px-4 py-2 mx-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Type your message..."
-          disabled={disabled}
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          multiple
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
         />
         
-        <button 
-          type="submit" 
-          className="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={disabled || (!messageText.trim() && attachments.length === 0)}
+        <TextareaAutosize
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message..."
+          disabled={disabled}
+          className="message-input flex-grow p-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 max-h-[150px]"
+          minRows={1}
+          maxRows={6}
+        />
+        
+        <button
+          onClick={handleSendMessage}
+          disabled={(!message.trim() && attachments.length === 0) || isUploading || disabled}
+          className={`p-2 rounded-full ${
+            (!message.trim() && attachments.length === 0) || isUploading || disabled
+              ? 'text-gray-400 bg-gray-100'
+              : 'text-white bg-blue-500 hover:bg-blue-600'
+          }`}
+          title="Send message"
         >
-          <IoSendSharp size={20} />
+          <FiSend size={20} />
         </button>
       </div>
-    </form>
+    </div>
   );
 };
 

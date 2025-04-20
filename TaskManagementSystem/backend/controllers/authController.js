@@ -39,7 +39,7 @@ const registerUser = async (req, res) => {
         }
 
         // Determine user Role: Admin if correct token is provided, otherwise Member
-        let role = "member";
+        let role = "tester";
         if (
             adminInviteToken &&
             adminInviteToken === process.env.ADMIN_INVITE_TOKEN
@@ -88,43 +88,45 @@ const registerUser = async (req, res) => {
 // @access  Public
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = 
-        req.body;
+        const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne(
-            { 
-                email 
-            }
-        );
+        const user = await User.findOne({ email });
 
-        if (!user){
-            return res.status(401).json(
-                {
-                    message:  "Invalid email or password"
-                }
-            );
+        if (!user) {
+            return res.status(401).json({
+                message: "Invalid email or password"
+            });
         }
 
+        // Check if password matches
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
+            return res.status(401).json({
+                message: "Invalid email or password"
+            });
+        }
+
+        // Update last login time
+        user.lastLogin = Date.now();
+        await user.save();
+
         // Return user data with JWT
-        res.json(
-            {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                profileImageURL: user.profileImageURL,
-                role: user.role,
-                token: generateToken(user._id),
-            }
-        )
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            profileImageURL: user.profileImageURL,
+            role: user.role,
+            token: generateToken(user._id),
+        });
     } 
     catch (error) {
-        res.status(500).json(
-            { 
-                message: "Server Error", 
-                error: error.message 
-            }
-        );
+        res.status(500).json({ 
+            message: "Server Error", 
+            error: error.message 
+        });
     }
 };
 
@@ -135,11 +137,11 @@ const getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select("-password"); // Exclude password from the user object
         if (!user){
-            return res.statsu(401).json(
+            return res.status(404).json(
                 {
-                    message:  "User not found"
+                    message: "User not found"
                 }
-            )
+            );
         }
         res.json(
             {
@@ -163,18 +165,20 @@ const getUserProfile = async (req, res) => {
 // @access  Private (Requires JWT)
 const updateUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id)
+        const user = await User.findById(req.user._id);
 
         if (!user){
-            return res.statsu(401).json(
+            return res.status(404).json(
                 {
-                    message:  "User not found"
+                    message: "User not found"
                 }
             );
         }
 
         user.name = req.body.name || user.name;
         user.email = req.body.email || user.email;
+        user.profileImageURL = req.body.profileImageURL || user.profileImageURL;
+        
         if (req.body.password) {
             // Hash password if provided
             const salt = await bcrypt.genSalt(10);
@@ -183,23 +187,20 @@ const updateUserProfile = async (req, res) => {
 
         const updatedUser = await user.save();
 
-        res.json(
-            {
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                role: updatedUser.role,
-                token: generateToken(updatedUser._id),
-            }
-        );
+        res.json({
+            _id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            profileImageURL: updatedUser.profileImageURL,
+            role: updatedUser.role,
+            token: generateToken(updatedUser._id),
+        });
     } 
     catch (error) {
-        res.status(500).json(
-            { 
-                message: "Server Error", 
-                error: error.message 
-            }
-        );
+        res.status(500).json({ 
+            message: "Server Error", 
+            error: error.message 
+        });
     }
 };
 

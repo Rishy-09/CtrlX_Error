@@ -1,7 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { UserContext } from './userContext';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 
 const ChatContext = createContext();
 
@@ -15,9 +15,10 @@ export const ChatProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // Get all chats for the logged-in user
-  const fetchChats = async (type = null) => {
+  const fetchChats = useCallback(async (type = null) => {
     if (!user) return;
     
     setLoading(true);
@@ -31,14 +32,14 @@ export const ChatProvider = ({ children }) => {
       setUnreadCount(totalUnread);
     } catch (error) {
       console.error('Error fetching chats:', error);
-      toast.error('Failed to load chats. Please try again.');
+      // Don't show toast here as axiosInstance will handle global errors
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Get a specific chat by ID
-  const fetchChatById = async (chatId) => {
+  const fetchChatById = useCallback(async (chatId) => {
     if (!chatId) return;
     
     setLoading(true);
@@ -48,11 +49,12 @@ export const ChatProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error('Error fetching chat:', error);
-      toast.error('Failed to load chat details. Please try again.');
+      // Don't show toast here as axiosInstance will handle global errors
+      return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Create a new chat
   const createChat = async (chatData) => {
@@ -61,10 +63,10 @@ export const ChatProvider = ({ children }) => {
       const response = await axiosInstance.post('/api/chats', chatData);
       setChats(prevChats => [response.data, ...prevChats]);
       setActiveChat(response.data);
+      toast.success('Chat created successfully');
       return response.data;
     } catch (error) {
       console.error('Error creating chat:', error);
-      toast.error('Failed to create chat. Please try again.');
       throw error;
     } finally {
       setLoading(false);
@@ -89,10 +91,10 @@ export const ChatProvider = ({ children }) => {
         setActiveChat(response.data);
       }
       
+      toast.success('Chat updated successfully');
       return response.data;
     } catch (error) {
       console.error('Error updating chat:', error);
-      toast.error('Failed to update chat. Please try again.');
       throw error;
     } finally {
       setLoading(false);
@@ -113,16 +115,16 @@ export const ChatProvider = ({ children }) => {
         setMessages([]);
       }
       
+      toast.success('Chat deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting chat:', error);
-      toast.error('Failed to delete chat. Please try again.');
       throw error;
     }
   };
 
   // Get messages for a chat
-  const fetchMessages = async (chatId, limit = 50, before = null) => {
+  const fetchMessages = useCallback(async (chatId, limit = 50, before = null) => {
     if (!chatId) return;
     
     setMessagesLoading(true);
@@ -145,15 +147,36 @@ export const ChatProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error('Error fetching messages:', error);
-      toast.error('Failed to load messages. Please try again.');
+      // Don't show toast here as axiosInstance will handle global errors
+      return [];
     } finally {
       setMessagesLoading(false);
     }
-  };
+  }, []);
 
   // Send a message
   const sendMessage = async (chatId, messageData) => {
+    // Prevent duplicate sends
+    if (sendingMessage) return;
+    
+    setSendingMessage(true);
     try {
+      // Optimistically add message to UI
+      const optimisticMessage = {
+        _id: `temp-${Date.now()}`,
+        content: messageData.content,
+        sender: {
+          _id: user._id,
+          name: user.name,
+          profileImageURL: user.profileImageURL
+        },
+        createdAt: new Date().toISOString(),
+        isOptimistic: true // Flag to identify optimistic updates
+      };
+      
+      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+      
+      // Prepare form data
       const formData = new FormData();
       
       // Add text content
@@ -188,8 +211,12 @@ export const ChatProvider = ({ children }) => {
         }
       );
       
-      // Add to messages
-      setMessages(prevMessages => [...prevMessages, response.data]);
+      // Replace optimistic message with real one
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.isOptimistic ? response.data : msg
+        )
+      );
       
       // Update lastMessage in chat list
       setChats(prevChats => 
@@ -200,7 +227,8 @@ export const ChatProvider = ({ children }) => {
               lastMessage: {
                 ...response.data,
                 sender: response.data.sender
-              }
+              },
+              updatedAt: new Date().toISOString()
             };
           }
           return chat;
@@ -210,8 +238,16 @@ export const ChatProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Remove optimistic message on error
+      setMessages(prevMessages => 
+        prevMessages.filter(msg => !msg.isOptimistic)
+      );
+      
       toast.error('Failed to send message. Please try again.');
       throw error;
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -229,10 +265,10 @@ export const ChatProvider = ({ children }) => {
         )
       );
       
+      toast.success('Message deleted');
       return true;
     } catch (error) {
       console.error('Error deleting message:', error);
-      toast.error('Failed to delete message. Please try again.');
       throw error;
     }
   };
@@ -255,16 +291,15 @@ export const ChatProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error('Error adding reaction:', error);
-      toast.error('Failed to add reaction. Please try again.');
       throw error;
     }
   };
 
   // Clear active chat and messages
-  const clearActiveChat = () => {
+  const clearActiveChat = useCallback(() => {
     setActiveChat(null);
     setMessages([]);
-  };
+  }, []);
 
   // Auto-refresh chats periodically
   useEffect(() => {
@@ -278,7 +313,7 @@ export const ChatProvider = ({ children }) => {
       
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, fetchChats]);
 
   const value = {
     chats,
@@ -287,6 +322,7 @@ export const ChatProvider = ({ children }) => {
     loading,
     messagesLoading,
     unreadCount,
+    sendingMessage,
     fetchChats,
     fetchChatById,
     createChat,
