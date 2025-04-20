@@ -7,9 +7,7 @@ import User from '../models/User.js';
 // @access Private (Admin)
 const getUsers = async (req, res) => {
     try {
-        const users =  await User.find({
-            role: 'member'
-        }).select('-password'); // Exclude password from the user object
+        const users = await User.find().select('-password'); // Exclude password from the user object
         
         // Add tasks count to each user
         const usersWithTasksCount = await Promise.all(

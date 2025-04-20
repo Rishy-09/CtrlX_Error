@@ -9,6 +9,7 @@ const UserProvider = ({ children }) => {
     const [loading, setLoading] = useState(true); // New state to track loading
 
     useEffect(() => {
+        // Only fetch if no user is set and we're still in loading state
         if (user) return;
 
         const accessToken = localStorage.getItem("token");
@@ -16,6 +17,9 @@ const UserProvider = ({ children }) => {
             setLoading(false); // Set loading to false if no token
             return;
         }
+
+        // Skip if we already attempted to fetch the user
+        if (!loading) return;
 
         const fetchUser = async () => {
             try {
@@ -30,7 +34,7 @@ const UserProvider = ({ children }) => {
             }
         }
         fetchUser();
-    }, []);
+    }, [user, loading]); // Added dependencies to prevent infinite loops
 
     const updateUser = (userData) => {
         setUser(userData);

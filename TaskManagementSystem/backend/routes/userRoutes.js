@@ -4,7 +4,7 @@ import { getUsers, getUserById } from "../controllers/userController.js"; // Imp
 const router = express.Router();
 
 // User Management Routes
-router.get("/", protect, adminOnly, getUsers); // Get all users (Admin only)
+router.get("/", protect, getUsers); // Get all users (Available to all authenticated users for chat functionality)
 router.get("/:id", protect, getUserById); // Get user by ID
 
 export default router;
