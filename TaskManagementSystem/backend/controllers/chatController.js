@@ -2,6 +2,7 @@ import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 import Bug from "../models/Bug.js";
+import Attachment from "../models/Attachment.js";
 import axios from "axios";
 import dotenv from "dotenv";
 import asyncHandler from "express-async-handler";

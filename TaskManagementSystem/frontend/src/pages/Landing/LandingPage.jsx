@@ -41,7 +41,7 @@ const LandingPage = () => {
           </div>
           <div className="md:w-1/2">
             <img 
-              src="https://via.placeholder.com/600x400/3b82f6/ffffff?text=Task+Management" 
+              src="https://placehold.co/600x400/3b82f6/ffffff?text=Task+Management" 
               alt="Task Management Dashboard Preview" 
               className="rounded-lg shadow-xl"
             />

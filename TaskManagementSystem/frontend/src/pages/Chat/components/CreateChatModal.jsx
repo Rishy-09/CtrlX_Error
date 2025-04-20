@@ -3,7 +3,7 @@ import { useChat } from '../../../context/ChatContext';
 import { FaTimes, FaGlobe, FaUsers, FaUser, FaRobot } from 'react-icons/fa';
 import axiosInstance from '../../../utils/axiosInstance';
 
-const CreateChatModal = ({ onClose, onChatCreated }) => {
+const CreateChatModal = ({ onClose, onSuccess }) => {
   const { createChat } = useChat();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -65,7 +65,7 @@ const CreateChatModal = ({ onClose, onChatCreated }) => {
       };
       
       const newChat = await createChat(chatData);
-      onChatCreated(newChat._id);
+      onSuccess(newChat._id);
       onClose();
     } catch (error) {
       console.error('Error creating chat:', error);

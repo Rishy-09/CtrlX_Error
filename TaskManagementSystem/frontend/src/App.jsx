@@ -21,6 +21,8 @@ import PrivateRoute from './routes/PrivateRoute.jsx';
 import UserProvider, {UserContext} from './context/userContext.jsx';
 import { ChatProvider } from './context/ChatContext.jsx';
 import { Toaster } from 'react-hot-toast';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const App = () => {
   return (
@@ -44,13 +46,17 @@ const App = () => {
               </Route>
 
               {/*User Routes*/}
-              <Route element={<PrivateRoute allowedRoles={["member"]}/>}>
+              <Route element={<PrivateRoute allowedRoles={["developer", "tester"]}/>}>
                 <Route path="/user/dashboard" element={<UserDashboard/>} />
                 <Route path="/user/tasks" element={<MyTasks/>} />
                 <Route path="/user/tasks-details/:id" element={<ViewTaskDetails/>} />
                 <Route path="/user/chat" element={<ChatPage />} />
                 <Route path="/user/chat/:chatId" element={<ChatPage />} />
               </Route>
+
+              {/* Redirect standalone /chat routes to the appropriate role-based route */}
+              <Route path="/chat" element={<ChatRedirect />} />
+              <Route path="/chat/:chatId" element={<ChatRedirect />} />
 
               {/*Default Route*/}
               <Route path="/" element={<Navigate to="/landing" />} />
@@ -74,14 +80,17 @@ const App = () => {
 
 export default App;
 
-const Root = () => {
-  const {user, loading} = useContext(UserContext);
-
-  if (loading) return <Outlet/>;
-
-  if (!user){
-    return <Navigate to="/landing" />;
-  }
-
-  return user.role === "admin" ? <Navigate to="/admin/dashboard" /> : <Navigate to="/user/dashboard" />;
+// ChatRedirect component to handle redirecting /chat routes to the correct role-based path
+const ChatRedirect = () => {
+  const { user } = useContext(UserContext);
+  const { chatId } = useParams(); // Get the chatId parameter if present
+  const navigate = useNavigate();
+  
+  // Redirect based on user role
+  useEffect(() => {
+    const basePath = user?.role === 'admin' ? '/admin/chat' : '/user/chat';
+    navigate(chatId ? `${basePath}/${chatId}` : basePath, { replace: true });
+  }, [user, chatId, navigate]);
+  
+  return null; // This component just redirects, no rendering
 }
