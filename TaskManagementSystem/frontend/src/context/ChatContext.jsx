@@ -161,52 +161,52 @@ export const ChatProvider = ({ children }) => {
     
     setSendingMessage(true);
     try {
+      let content = '';
+      let attachments = [];
+      
+      // Check if messageData is FormData (from ChatPage) or plain object (from API calls)
+      if (messageData instanceof FormData) {
+        content = messageData.get('content') || '';
+        
+        // Extract files if present
+        if (messageData.getAll('attachments')) {
+          attachments = messageData.getAll('attachments');
+        }
+      } else {
+        content = messageData.content || '';
+        attachments = messageData.attachments || [];
+      }
+      
       // Optimistically add message to UI
       const optimisticMessage = {
         _id: `temp-${Date.now()}`,
-        content: messageData.content,
+        content: content,
         sender: {
           _id: user._id,
           name: user.name,
           profileImageURL: user.profileImageURL
         },
         createdAt: new Date().toISOString(),
-        isOptimistic: true // Flag to identify optimistic updates
+        isOptimistic: true, // Flag to identify optimistic updates
+        attachments: attachments.length > 0 ? attachments.map(file => ({
+          _id: `temp-${Date.now()}-${file.name}`,
+          originalFilename: file.name,
+          filename: file.name,
+          size: file.size,
+          mimetype: file.type,
+          isOptimistic: true
+        })) : []
       };
       
       setMessages(prevMessages => [...prevMessages, optimisticMessage]);
       
-      // Prepare form data
-      const formData = new FormData();
-      
-      // Add text content
-      formData.append('content', messageData.content);
-      
-      // Add mentions if any
-      if (messageData.mentions && messageData.mentions.length > 0) {
-        messageData.mentions.forEach(userId => {
-          formData.append('mentions', userId);
-        });
-      }
-      
-      // Add reply info if any
-      if (messageData.replyTo) {
-        formData.append('replyTo', messageData.replyTo);
-      }
-      
-      // Add attachments if any
-      if (messageData.attachments && messageData.attachments.length > 0) {
-        messageData.attachments.forEach(file => {
-          formData.append('attachments', file);
-        });
-      }
-      
+      // Use the original messageData for the API call, whether it's FormData or plain object
       const response = await axiosInstance.post(
         `/api/chats/${chatId}/messages`, 
-        formData,
+        messageData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': messageData instanceof FormData ? 'multipart/form-data' : 'application/json'
           }
         }
       );

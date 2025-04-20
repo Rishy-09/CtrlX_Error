@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useChat } from '../../../context/ChatContext';
 import { FaPlus, FaUser, FaUsers, FaGlobe, FaRobot } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { UserContext } from '../../../context/userContext';
 
 const ChatSidebar = ({ onCreateChat, onSelectChat }) => {
   const { chats, loading, activeChat, fetchChats } = useChat();
+  const { user } = useContext(UserContext);
   const [filter, setFilter] = useState('all');
+  const navigate = useNavigate();
   
   // Filter chats by type
   const handleFilterChange = (type) => {
@@ -48,6 +52,17 @@ const ChatSidebar = ({ onCreateChat, onSelectChat }) => {
     
     // Otherwise show date
     return format(date, 'MM/dd/yy');
+  };
+
+  // Handle chat selection
+  const handleChatClick = (chatId) => {
+    // Navigate to the correct path based on user role
+    const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+    navigate(`${basePath}/${chatId}`);
+    
+    if (onSelectChat) {
+      onSelectChat(chatId);
+    }
   };
   
   return (
@@ -112,7 +127,7 @@ const ChatSidebar = ({ onCreateChat, onSelectChat }) => {
             <div 
               key={chat._id}
               className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${activeChat?._id === chat._id ? 'bg-blue-50' : ''}`}
-              onClick={() => onSelectChat(chat._id)}
+              onClick={() => handleChatClick(chat._id)}
             >
               <div className="flex items-center">
                 <div className="mr-3 flex-shrink-0">

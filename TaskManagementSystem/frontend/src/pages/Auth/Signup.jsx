@@ -15,6 +15,7 @@ const Signup = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("tester");
   const [adminInviteToken, setAdminInviteToken] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +54,13 @@ const Signup = () => {
           return;
         }
 
+        // Check for admin role with no invite token
+        if (role === "admin" && !adminInviteToken) {
+          setError("Admin invite token is required for admin role");
+          setLoading(false);
+          return;
+        }
+
         setError("");
 
         // Upload image if present
@@ -74,10 +82,11 @@ const Signup = () => {
           email,
           password,
           profileImageURL,
-          adminInviteToken: adminInviteToken || undefined,
+          role,
+          adminInviteToken: role === "admin" ? adminInviteToken : undefined,
         });
 
-        const { token, role } = response.data;
+        const { token, role: userRole } = response.data;
         if (token) {
           localStorage.setItem("token", token); // Store token in local storage
           updateUser(response.data); // Update user context
@@ -86,10 +95,10 @@ const Signup = () => {
           toast.success('Account created successfully!');
           
           // Redirect based on role
-          if (role === "admin") {
+          if (userRole === "admin") {
             navigate("/admin/dashboard");
           }
-          else {
+          else if (userRole === "developer" || userRole === "tester") {
             navigate("/user/dashboard");
           }
         }
@@ -140,6 +149,7 @@ const Signup = () => {
               autoComplete="username"
               required
             />
+
             <Input
               value={password}
               onChange={({target}) => setPassword(target.value)}
@@ -151,13 +161,31 @@ const Signup = () => {
               minLength={6}
             />
 
-            <Input
-              value={adminInviteToken}
-              onChange={({target}) => setAdminInviteToken(target.value)}
-              label="Admin Invite Token (Optional)"
-              placeholder="6 Digit Code"
-              type="text"
-            />
+            <div className="flex flex-col">
+              <label className="text-sm text-slate-700 mb-1">Role</label>
+              <select
+                value={role}
+                onChange={({target}) => setRole(target.value)}
+                className="p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="tester">Tester</option>
+                <option value="developer">Developer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            {role === "admin" && (
+              <div className="md:col-span-2">
+                <Input
+                  value={adminInviteToken}
+                  onChange={({target}) => setAdminInviteToken(target.value)}
+                  label="Admin Invite Token (Required for Admin)"
+                  placeholder="Enter 6-digit invite code"
+                  type="text"
+                  required={role === "admin"}
+                />
+              </div>
+            )}
           </div>
           {error && <p className='text-red-500 text-xs pb-2.5 mt-2'>{error}</p>}
 

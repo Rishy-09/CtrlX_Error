@@ -43,11 +43,23 @@ const ChatPage = () => {
     
     const loadChat = async () => {
       if (chatId) {
-        const chat = await fetchChatById(chatId);
-        // Only update state if component is still mounted
-        if (isActive && !chat) {
-          toast.error('Chat not found or you do not have access');
-          navigate('/user/chat');
+        try {
+          const chat = await fetchChatById(chatId);
+          // Only update state if component is still mounted
+          if (isActive && !chat) {
+            toast.error('Chat not found or you do not have access');
+            // Navigate to the correct path based on user role
+            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+            navigate(basePath);
+          }
+        } catch (error) {
+          console.error('Error loading chat:', error);
+          if (isActive) {
+            toast.error('Failed to load chat');
+            // Navigate to the correct path based on user role
+            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+            navigate(basePath);
+          }
         }
       } else if (isActive) {
         clearActiveChat();
@@ -59,9 +71,8 @@ const ChatPage = () => {
     // Cleanup function
     return () => {
       isActive = false;
-      // No need to call clearActiveChat here
     };
-  }, [chatId, fetchChatById, navigate, clearActiveChat]);
+  }, [chatId, fetchChatById, navigate, clearActiveChat, user.role]);
   
   // Fetch messages when active chat changes
   useEffect(() => {
@@ -112,10 +123,24 @@ const ChatPage = () => {
   
   // Handle sending a message
   const handleSendMessage = async (messageData) => {
-    if (!messageData.content.trim() && messageData.attachments.length === 0) return;
+    if (!messageData.content.trim() && (!messageData.attachments || messageData.attachments.length === 0)) {
+      return;
+    }
     
     try {
-      await sendMessage(chatId, messageData);
+      // Format the data to match what the backend expects
+      const formData = new FormData();
+      formData.append('content', messageData.content);
+      
+      // Add attachments if any
+      if (messageData.attachments && messageData.attachments.length > 0) {
+        messageData.attachments.forEach(file => {
+          formData.append('attachments', file);
+        });
+      }
+      
+      // Send the message through the chat context
+      await sendMessage(chatId, formData);
       
       // If AI assistant is enabled, automatically fetch messages again after a delay
       // to show the AI response
@@ -126,7 +151,7 @@ const ChatPage = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      // Error is already handled in ChatContext
+      toast.error('Failed to send message. Please try again.');
     }
   };
   
@@ -144,12 +169,15 @@ const ChatPage = () => {
   const renderChatHeader = () => {
     if (!activeChat) return null;
     
+    // Get the correct base path based on user role
+    const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+    
     return (
       <div className="border-b border-gray-200 p-4 flex items-center justify-between bg-white">
         <div className="flex items-center">
           <button 
             className="md:hidden mr-2 text-gray-600"
-            onClick={() => navigate('/user/chat')}
+            onClick={() => navigate(basePath)}
           >
             <MdArrowBack size={24} />
           </button>
@@ -232,7 +260,11 @@ const ChatPage = () => {
       <div className={`w-full md:w-80 bg-white border-r border-gray-200 ${chatId ? 'hidden md:block' : 'block'}`}>
         <ChatSidebar 
           onCreateChat={handleCreateChat} 
-          onSelectChat={(id) => navigate(`/user/chat/${id}`)}
+          onSelectChat={(id) => {
+            // Navigate to the correct path based on user role
+            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+            navigate(`${basePath}/${id}`);
+          }}
         />
       </div>
       
@@ -250,9 +282,9 @@ const ChatPage = () => {
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <div className="text-xl mb-2">Select a chat or create a new one</div>
-            <button 
-              onClick={handleCreateChat} 
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            <button
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              onClick={handleCreateChat}
             >
               Create New Chat
             </button>
@@ -260,14 +292,20 @@ const ChatPage = () => {
         )}
       </div>
       
-      {/* Modals */}
+      {/* Create Chat Modal */}
       {showCreateModal && (
-        <CreateChatModal 
+        <CreateChatModal
           onClose={() => setShowCreateModal(false)}
-          onChatCreated={(chatId) => navigate(`/user/chat/${chatId}`)}
+          onSuccess={(chatId) => {
+            setShowCreateModal(false);
+            // Navigate to the correct path based on user role
+            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+            navigate(`${basePath}/${chatId}`);
+          }}
         />
       )}
       
+      {/* Chat Settings Modal */}
       {showSettingsModal && activeChat && (
         <ChatSettingsModal
           chat={activeChat}

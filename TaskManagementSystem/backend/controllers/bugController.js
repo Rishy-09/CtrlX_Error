@@ -895,6 +895,106 @@ const getBugAttachments = async (req, res) => {
   }
 };
 
+// @desc    List bugs for a specific project
+// @route   GET /api/bugs/project/:id/errors
+// @access  Private (Tester, Admin)
+const listBugsForProject = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    
+    // Find bugs associated with the specified project
+    const bugs = await Bug.find({ project: projectId })
+      .populate("reporter", "name email profileImageURL")
+      .populate("assignedTo", "name email profileImageURL")
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      bugs,
+      count: bugs.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Assign a bug to a developer
+// @route   POST /api/bugs/project/:id/assign
+// @access  Private (Admin only)
+const assignBugToDeveloper = async (req, res) => {
+  try {
+    const { bugId, developerId } = req.body;
+    
+    if (!bugId || !developerId) {
+      return res.status(400).json({
+        message: "Bug ID and developer ID are required",
+      });
+    }
+    
+    const bug = await Bug.findById(bugId);
+    
+    if (!bug) {
+      return res.status(404).json({
+        message: "Bug not found",
+      });
+    }
+    
+    // Add developer to assignedTo array if not already there
+    if (!bug.assignedTo.includes(developerId)) {
+      bug.assignedTo.push(developerId);
+    }
+    
+    // If a bug is being assigned and it's 'Open', automatically change to 'In Progress'
+    if (bug.status === "Open") {
+      bug.status = "In Progress";
+    }
+    
+    await bug.save();
+    
+    const updatedBug = await Bug.findById(bugId)
+      .populate("reporter", "name email profileImageURL")
+      .populate("assignedTo", "name email profileImageURL");
+    
+    res.json({
+      message: "Bug assigned to developer successfully",
+      bug: updatedBug,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    List bugs assigned to developer for fixing
+// @route   GET /api/bugs/bug-fixes
+// @access  Private (Developer only)
+const listBugFixes = async (req, res) => {
+  try {
+    // Find bugs assigned to current developer that are in progress
+    const bugs = await Bug.find({ 
+      assignedTo: req.user._id,
+      status: { $in: ["In Progress", "Testing", "Reopened"] }
+    })
+      .populate("reporter", "name email profileImageURL")
+      .populate("assignedTo", "name email profileImageURL")
+      .sort({ priority: -1, createdAt: -1 });
+    
+    res.json({
+      bugs,
+      count: bugs.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
 export {
   getBugs,
   getBugById,
@@ -907,4 +1007,7 @@ export {
   getUserDashboardData,
   assignBug,
   getBugAttachments,
+  listBugsForProject,
+  assignBugToDeveloper,
+  listBugFixes
 }; 

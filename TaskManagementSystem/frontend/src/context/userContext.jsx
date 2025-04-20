@@ -24,7 +24,15 @@ const UserProvider = ({ children }) => {
         const fetchUser = async () => {
             try {
                 const response = await axiosInstance.get(API_PATHS.AUTH.GET_PROFILE);
-                setUser(response.data);
+                // Handle nested user object from the backend response
+                if (response.data && response.data.user) {
+                    // Add token to user object
+                    const userData = {
+                        ...response.data.user,
+                        token: accessToken
+                    };
+                    setUser(userData);
+                }
             }
             catch (error) {
                 console.error("User not authenticated", error);

@@ -20,7 +20,7 @@ const generateToken = (userId) => {
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password, profileImageURL, adminInviteToken } = 
+        const { name, email, password, profileImageURL, adminInviteToken, role } = 
         req.body;
 
         // Check if user already exists
@@ -38,14 +38,20 @@ const registerUser = async (req, res) => {
             );
         }
 
-        // Determine user Role: Admin if correct token is provided, otherwise Member
-        let role = "tester";
-        if (
-            adminInviteToken &&
-            adminInviteToken === process.env.ADMIN_INVITE_TOKEN
-        ) {
-            role = "admin";
+        // Validate role - must be one of the allowed roles
+        const allowedRoles = ["admin", "developer", "tester"];
+        let userRole = role && allowedRoles.includes(role) ? role : "tester";
+
+        // Validate admin invite token only if the role is admin
+        if (userRole === "admin") {
+            if (!adminInviteToken || adminInviteToken !== process.env.ADMIN_INVITE_TOKEN) {
+                return res.status(400).json({ 
+                    message: "Invalid admin invite token" 
+                });
+            }
         }
+        // For other roles, adminInviteToken is optional and ignored
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -57,7 +63,7 @@ const registerUser = async (req, res) => {
                 email, 
                 password: hashedPassword, 
                 profileImageURL, 
-                role 
+                role: userRole 
             }
         );
 

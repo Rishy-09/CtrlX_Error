@@ -6,6 +6,7 @@ import fs from "fs";
 const uploadDir = "./uploads";
 const bugAttachmentsDir = path.join(uploadDir, "bugs");
 const profileImagesDir = path.join(uploadDir, "profiles");
+const chatAttachmentsDir = path.join(uploadDir, "chats");
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
@@ -19,6 +20,10 @@ if (!fs.existsSync(profileImagesDir)) {
     fs.mkdirSync(profileImagesDir);
 }
 
+if (!fs.existsSync(chatAttachmentsDir)) {
+    fs.mkdirSync(chatAttachmentsDir);
+}
+
 // Configure storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -28,6 +33,8 @@ const storage = multer.diskStorage({
             uploadPath = bugAttachmentsDir;
         } else if (req.baseUrl.includes("/users") || req.baseUrl.includes("/auth")) {
             uploadPath = profileImagesDir;
+        } else if (req.baseUrl.includes("/chats")) {
+            uploadPath = chatAttachmentsDir;
         }
         
         cb(null, uploadPath);

@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, restrictTo } from "../middlewares/authMiddleware.js";
+import { protect, restrictTo, authorizeRoles } from "../middlewares/authMiddleware.js";
 import { 
   getBugs, 
   getBugById, 
@@ -11,7 +11,10 @@ import {
   getDashboardData,
   getUserDashboardData,
   assignBug,
-  getBugAttachments
+  getBugAttachments,
+  listBugsForProject,
+  assignBugToDeveloper,
+  listBugFixes
 } from "../controllers/bugController.js";
 import uploadMiddleware from "../middlewares/uploadMiddleware.js";
 
@@ -28,6 +31,11 @@ router.get("/dashboard/user", getUserDashboardData);
 // Routes for admins and developers
 router.use("/dashboard", restrictTo("admin", "developer"));
 router.get("/dashboard", getDashboardData);
+
+// Project specific bug routes with role-based access
+router.get('/project/:id/errors', protect, authorizeRoles('tester', 'admin'), listBugsForProject);
+router.post('/project/:id/assign', protect, authorizeRoles('admin'), assignBugToDeveloper);
+router.get('/bug-fixes', protect, authorizeRoles('developer'), listBugFixes);
 
 // Bug CRUD operations
 router.route("/")
