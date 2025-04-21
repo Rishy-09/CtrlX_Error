@@ -28,7 +28,7 @@ const AddAttachmentsInput = ({attachments, setAttachments}) => {
         >
           <div className='flex-1 flex items-center gap-3 border border-gray-100'>
             <LuPaperclip className='text-gray-400' />
-            <p className='text-xs text-black'>{item}</p>
+            <p className='text-xs text-gray-800'>{item}</p>
           </div>
 
           <button
@@ -50,15 +50,11 @@ const AddAttachmentsInput = ({attachments, setAttachments}) => {
             placeholder="Add File Link"
             value={option}
             onChange={({target}) => setOption(target.value)}
-            className='w-full text-[13px] text-black outline-none bg-white py-2'
+            className='w-full text-[13px] text-gray-800 outline-none bg-white py-2'
           />
         </div>
-
-        <button
-          className='card-btn text-nowrap'
-          onClick={handleAddOption}
-        >
-          <HiMiniPlus className='text-lg' /> Add
+        <button className='card-btn text-nowrap' onClick={handleAddOption}>
+          <HiMiniPlus className='text-lg'/>Add
         </button>
       </div>
     </div>

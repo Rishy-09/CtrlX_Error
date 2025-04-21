@@ -6,7 +6,7 @@ import {UserContext} from '../../context/userContext.jsx'
 const DashboardLayout = ({children, activeMenu}) => {
   const {user} = useContext(UserContext)
   return (
-    <div className="">
+    <div className="bg-white min-h-screen transition-colors duration-300">
       <Navbar activeMenu={activeMenu}/>
 
       {user && (
@@ -15,12 +15,11 @@ const DashboardLayout = ({children, activeMenu}) => {
             <SideMenu activeMenu={activeMenu}/>
           </div>
 
-          <div className="grow mx-5">{children}</div>
+          <div className="grow mx-5 text-gray-800">{children}</div>
         </div>
       )}
     </div>
   )
-
 }
 
 export default DashboardLayout

@@ -32,7 +32,7 @@ const ThemeToggle = ({ showLabel = false }) => {
       {showLabel && (
         <div className="flex items-center mr-2">
           <FaSun className={`text-yellow-500 mr-2 ${darkMode ? 'opacity-50' : 'opacity-100'}`} />
-          <span className="dark:text-white">Light</span>
+          <span className="text-gray-800 dark:text-gray-200">Light</span>
         </div>
       )}
       
@@ -53,7 +53,7 @@ const ThemeToggle = ({ showLabel = false }) => {
       {showLabel && (
         <div className="flex items-center ml-2">
           <FaMoon className={`text-blue-700 mr-2 ${darkMode ? 'opacity-100' : 'opacity-50'}`} />
-          <span className="dark:text-white">Dark</span>
+          <span className="text-gray-800 dark:text-gray-200">Dark</span>
         </div>
       )}
     </div>

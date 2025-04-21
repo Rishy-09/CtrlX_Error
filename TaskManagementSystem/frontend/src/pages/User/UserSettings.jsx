@@ -414,28 +414,6 @@ const UserSettings = () => {
           </div>
         );
         
-      case 'appearance':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Dark Mode</h3>
-                <p className="text-sm text-gray-500">Toggle between light and dark theme</p>
-              </div>
-              <button
-                onClick={toggleDarkMode}
-                className={`w-14 h-7 rounded-full flex items-center p-1 transition-colors ${
-                  darkMode ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'
-                }`}
-              >
-                <div className="bg-white w-5 h-5 rounded-full shadow flex items-center justify-center">
-                  {darkMode ? <FiMoon size={12} /> : <FiSun size={12} />}
-                </div>
-              </button>
-            </div>
-          </div>
-        );
-        
       default:
         return null;
     }
@@ -484,18 +462,6 @@ const UserSettings = () => {
               >
                 <FiBell />
                 <span>Notifications</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('appearance')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-md transition-colors ${
-                  activeTab === 'appearance' 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {darkMode ? <FiMoon /> : <FiSun />}
-                <span>Appearance</span>
               </button>
             </nav>
           </div>

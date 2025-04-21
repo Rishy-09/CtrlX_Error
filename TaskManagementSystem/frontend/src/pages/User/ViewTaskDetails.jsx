@@ -224,7 +224,7 @@ const Attachment = ({ link, index, onClick }) => {
         {index < 9 ? `0${index + 1}` : index + 1}
       </span>
 
-      <p className='text-xs text-black'>{link}</p>
+      <p className='text-xs text-gray-800'>{link}</p>
     </div>
 
     <LuSquareArrowOutUpRight className='text-gray-400 ' />
