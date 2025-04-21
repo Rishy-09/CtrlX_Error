@@ -72,7 +72,7 @@ const Login = () => {
   return (
     <AuthLayout>
       <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify ">
-        <h3 className="text-xl font-semibold text-black">Welcome Back </h3>
+        <h3 className="text-xl font-semibold text-gray-800">Welcome Back </h3>
         <p className="text-sm text-slate-500 mt-[5px] mb-6">
           Please enter your details to log in
         </p>
