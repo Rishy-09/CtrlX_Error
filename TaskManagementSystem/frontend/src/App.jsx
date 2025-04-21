@@ -13,11 +13,16 @@ import PricingPage from "./pages/Pricing/PricingPage.jsx";
 import ManageTasks from "./pages/Admin/ManageTasks.jsx";
 import CreateTask from "./pages/Admin/CreateTask.jsx";
 import ManageUsers from "./pages/Admin/ManageUsers.jsx";
+import AdminBugDashboard from "./pages/Admin/AdminBugDashboard.jsx";
 
 import UserDashboard from './pages/User/UserDashboard.jsx';
+import TesterDashboard from './pages/User/TesterDashboard.jsx';
+import DeveloperDashboard from './pages/User/DeveloperDashboard.jsx';
 import MyTasks from './pages/User/MyTasks.jsx';
 import ViewTaskDetails from './pages/User/ViewTaskDetails.jsx';
 import UserSettings from './pages/User/UserSettings.jsx';
+
+import BugDetails from './pages/Bugs/BugDetails.jsx';
 
 import ChatPage from './pages/Chat/ChatPage.jsx';
 
@@ -66,6 +71,8 @@ const App = () => {
               {/*Admin Routes*/}
               <Route element={<PrivateRoute allowedRoles={["admin"]}/>}>
                 <Route path="/admin/dashboard" element={<Dashboard/>} />
+                <Route path="/admin/bugs" element={<AdminBugDashboard/>} />
+                <Route path="/admin/bugs/:id" element={<BugDetails/>} />
                 <Route path="/admin/tasks" element={<ManageTasks/>} />
                 <Route path="/admin/create-task" element={<CreateTask/>} />
                 <Route path="/admin/users" element={<ManageUsers/>} />
@@ -74,9 +81,29 @@ const App = () => {
                 <Route path="/admin/settings" element={<UserSettings />} />
               </Route>
 
-              {/*User Routes*/}
+              {/*Developer Routes*/}
+              <Route element={<PrivateRoute allowedRoles={["developer"]}/>}>
+                <Route path="/developer/dashboard" element={<DeveloperDashboard/>} />
+                <Route path="/developer/bugs" element={<MyTasks/>} />
+                <Route path="/developer/bugs/:id" element={<BugDetails/>} />
+                <Route path="/developer/chat" element={<ChatPage />} />
+                <Route path="/developer/chat/:chatId" element={<ChatPage />} />
+                <Route path="/developer/settings" element={<UserSettings />} />
+              </Route>
+
+              {/*Tester Routes*/}
+              <Route element={<PrivateRoute allowedRoles={["tester"]}/>}>
+                <Route path="/tester/dashboard" element={<TesterDashboard/>} />
+                <Route path="/tester/bugs" element={<MyTasks/>} />
+                <Route path="/tester/bugs/:id" element={<BugDetails/>} />
+                <Route path="/tester/chat" element={<ChatPage />} />
+                <Route path="/tester/chat/:chatId" element={<ChatPage />} />
+                <Route path="/tester/settings" element={<UserSettings />} />
+              </Route>
+
+              {/*Legacy User Routes - These will redirect based on role*/}
               <Route element={<PrivateRoute allowedRoles={["developer", "tester"]}/>}>
-                <Route path="/user/dashboard" element={<UserDashboard/>} />
+                <Route path="/user/dashboard" element={<RoleBasedDashboardRedirect/>} />
                 <Route path="/user/tasks" element={<MyTasks/>} />
                 <Route path="/user/tasks-details/:id" element={<ViewTaskDetails/>} />
                 <Route path="/user/chat" element={<ChatPage />} />
@@ -91,6 +118,9 @@ const App = () => {
               
               {/* Redirect /profile to the appropriate settings page */}
               <Route path="/profile" element={<ProfileRedirect />} />
+
+              {/* Redirect bug routes to role-specific routes */}
+              <Route path="/bugs/:id" element={<BugRedirect />} />
 
               {/*Default Route*/}
               <Route path="/" element={<Navigate to="/landing" />} />
@@ -124,7 +154,16 @@ const ChatRedirect = () => {
   
   // Redirect based on user role
   useEffect(() => {
-    const basePath = user?.role === 'admin' ? '/admin/chat' : '/user/chat';
+    let basePath = '/user/chat';
+    
+    if (user?.role === 'admin') {
+      basePath = '/admin/chat';
+    } else if (user?.role === 'developer') {
+      basePath = '/developer/chat';
+    } else if (user?.role === 'tester') {
+      basePath = '/tester/chat';
+    }
+    
     navigate(chatId ? `${basePath}/${chatId}` : basePath, { replace: true });
   }, [user, chatId, navigate]);
   
@@ -138,9 +177,62 @@ const ProfileRedirect = () => {
   
   // Redirect based on user role
   useEffect(() => {
-    const settingsPath = user?.role === 'admin' ? '/admin/settings' : '/user/settings';
+    let settingsPath = '/user/settings';
+    
+    if (user?.role === 'admin') {
+      settingsPath = '/admin/settings';
+    } else if (user?.role === 'developer') {
+      settingsPath = '/developer/settings';
+    } else if (user?.role === 'tester') {
+      settingsPath = '/tester/settings';
+    }
+    
     navigate(settingsPath, { replace: true });
   }, [user, navigate]);
+  
+  return null; // This component just redirects, no rendering
+}
+
+// RoleBasedDashboardRedirect component to direct users to their role-specific dashboard
+const RoleBasedDashboardRedirect = () => {
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+  
+  // Redirect based on user role
+  useEffect(() => {
+    if (user?.role === 'developer') {
+      navigate('/developer/dashboard', { replace: true });
+    } else if (user?.role === 'tester') {
+      navigate('/tester/dashboard', { replace: true });
+    } else {
+      // Fallback to the generic user dashboard if role is undefined
+      navigate('/user/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+  
+  return null; // This component just redirects, no rendering
+}
+
+// BugRedirect component to handle redirecting /bugs routes to the correct role-based path
+const BugRedirect = () => {
+  const { user } = useContext(UserContext);
+  const { id } = useParams(); // Get the bug id parameter
+  const navigate = useNavigate();
+  
+  // Redirect based on user role
+  useEffect(() => {
+    let basePath = '/user/bugs';
+    
+    if (user?.role === 'admin') {
+      basePath = '/admin/bugs';
+    } else if (user?.role === 'developer') {
+      basePath = '/developer/bugs';
+    } else if (user?.role === 'tester') {
+      basePath = '/tester/bugs';
+    }
+    
+    navigate(`${basePath}/${id}`, { replace: true });
+  }, [user, id, navigate]);
   
   return null; // This component just redirects, no rendering
 }

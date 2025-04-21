@@ -267,12 +267,17 @@ const forgotPassword = async (req, res) => {
         const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
         const resetUrl = `${baseUrl}/reset-password/${resetToken}?email=${encodeURIComponent(email)}`;
 
-        // Create email transport
+        // Create email transport with more secure configuration
         const transporter = nodemailer.createTransport({
-            service: process.env.EMAIL_SERVICE || 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // use SSL
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
+                user: process.env.EMAIL_USER || 'your-email@gmail.com', // replace with actual email in .env
+                pass: process.env.EMAIL_PASSWORD || 'your-app-password' // replace with actual app password in .env
+            },
+            tls: {
+                rejectUnauthorized: false
             }
         });
 

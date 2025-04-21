@@ -19,6 +19,7 @@ export const API_PATHS = {
         CREATE_USER: "/api/users", // Create a new user (Admin only)
         UPDATE_USER: (userId) => `/api/users/${userId}`, // Update user details
         DELETE_USER: (userId) => `/api/users/${userId}`, // Delete a user
+        GET_DEVELOPERS: "/api/users?role=developer", // Get all developers
     },
 
     TASKS: {
@@ -80,8 +81,9 @@ export const API_PATHS = {
     },
 
     BUGS: {
-        GET_DASHBOARD_DATA: "/api/bugs/dashboard-data", // Get Dashboard Data
+        GET_DASHBOARD_DATA: "/api/bugs/dashboard", // Get Dashboard Data for admin
         GET_USER_DASHBOARD_DATA: "/api/bugs/dashboard/user", // Get User Dashboard Data
+        GET_ASSIGNED_BUGS: "/api/bugs?assignedTo=me", // Get bugs assigned to the current user
         GET_ALL_BUGS: "/api/bugs", // Get all bugs
         GET_BUG_BY_ID: (bugId) => `/api/bugs/${bugId}`, // Get bug by ID
         CREATE_BUG: "/api/bugs", // Create a new bug
@@ -91,6 +93,9 @@ export const API_PATHS = {
         UPDATE_BUG_CHECKLIST: (bugId) => `/api/bugs/${bugId}/checklist`, // Update bug checklist
         ASSIGN_BUG: (bugId) => `/api/bugs/${bugId}/assign`, // Assign bug to users
         GET_BUG_ATTACHMENTS: (bugId) => `/api/bugs/${bugId}/attachments`, // Get bug attachments
+        MARK_RESOLVED: (bugId) => `/api/bugs/${bugId}/status`, // Mark bug as resolved (status: Testing)
+        MARK_COMPLETED: (bugId) => `/api/bugs/${bugId}/status`, // Mark bug as completed (status: Closed)
+        GET_NOTIFICATIONS: "/api/bugs/notifications", // Get bug-related notifications
     },
 
     COMMENTS: {
