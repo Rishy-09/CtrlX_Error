@@ -2,7 +2,6 @@ import React, { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiMenu, FiX, FiChevronLeft, FiUser, FiSettings, FiLogOut } from 'react-icons/fi';
 import { UserContext } from '../../context/userContext';
-import ThemeToggle from './ThemeToggle';
 
 const Navbar = () => {
   const { user, clearUser } = useContext(UserContext);
@@ -110,9 +109,6 @@ const Navbar = () => {
           
           {/* Right side */}
           <div className="flex items-center">
-            {/* Theme Toggle */}
-            <ThemeToggle className="mx-2" />
-            
             {/* User Profile Menu */}
             {user ? (
               <div className="relative ml-3">

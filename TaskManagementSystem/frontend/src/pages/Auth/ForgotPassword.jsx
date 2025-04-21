@@ -45,7 +45,7 @@ const ForgotPassword = () => {
   return (
     <AuthLayout>
       <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify">
-        <h3 className="text-xl font-semibold text-black">Forgot Password</h3>
+        <h3 className="text-xl font-semibold text-gray-800">Forgot Password</h3>
         <p className="text-sm text-slate-500 mt-[5px] mb-6">
           Enter your email address and we'll send you instructions to reset your password
         </p>
@@ -53,7 +53,7 @@ const ForgotPassword = () => {
         {emailSent ? (
           <div className="bg-green-50 border border-green-100 rounded-md p-4 mb-4">
             <h4 className="text-green-600 font-medium mb-2">Email Sent</h4>
-            <p className="text-sm text-green-600 mb-3">
+            <p className="text-sm mb-3">
               Please check your email for password reset instructions. The link will expire in 1 hour.
             </p>
             <Link to="/login" className="text-blue-600 text-sm hover:underline">
