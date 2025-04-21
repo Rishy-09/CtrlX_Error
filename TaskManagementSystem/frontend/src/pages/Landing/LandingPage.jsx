@@ -10,14 +10,14 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <FaTasks className="text-blue-600 text-2xl" />
-            <span className="text-xl font-bold">TaskPro</span>
+            <span className="text-xl font-bold text-gray-800">CtrlX_Error</span>
           </div>
           <nav className="hidden md:flex space-x-8">
             <a href="#features" className="text-gray-600 hover:text-blue-600">Features</a>
             <a href="#about" className="text-gray-600 hover:text-blue-600">About</a>
             <a href="#testimonials" className="text-gray-600 hover:text-blue-600">Testimonials</a>
           </nav>
-          <div className="flex space-x-4">
+          <div className="flex items-center space-x-4">
             <Link to="/login" className="px-4 py-2 rounded text-blue-600 hover:text-blue-800">Login</Link>
             <Link to="/signUp" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Sign Up</Link>
           </div>

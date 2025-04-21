@@ -169,7 +169,7 @@ const ResetPassword = () => {
   return (
     <AuthLayout>
       <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify">
-        <h3 className="text-xl font-semibold text-black">Reset Password</h3>
+        <h3 className="text-xl font-semibold text-gray-800">Reset Password</h3>
         <p className="text-sm text-slate-500 mt-[5px] mb-6">
           Enter your new password below
         </p>
