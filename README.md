@@ -60,85 +60,169 @@ CtrlX is a role-based bug tracking system designed for developers, testers, and 
 Directory structure:
 └── rishy-09-ctrlx_error/
     ├── README.md
-    ├── LICENSE
-    ├── TODO.txt
-    ├── backend/
-    │   ├── bug-report.csv
+    ├── package.json
+    ├── client/
+    │   ├── README.md
+    │   ├── eslint.config.js
+    │   ├── index.html
     │   ├── package-lock.json
     │   ├── package.json
-    │   ├── server.js
+    │   ├── tailwind.config.js
+    │   ├── vite.config.js
     │   ├── .gitignore
-    │   ├── config/
-    │   │   └── db.js
-    │   ├── controllers/
-    │   │   ├── authController.js
-    │   │   ├── bugController.js
-    │   │   ├── bugHistoryController.js
-    │   │   └── commentController.js
-    │   ├── middleware/
-    │   │   ├── authMiddleware.js
-    │   │   └── roleMiddleware.js
-    │   ├── models/
-    │   │   ├── Bug.js
-    │   │   ├── BugHistory.js
-    │   │   ├── Comment.js
-    │   │   └── User.js
-    │   ├── routes/
-    │   │   ├── authRoutes.js
-    │   │   ├── bugRoutes.js
-    │   │   ├── commentRoutes.js
-    │   │   └── reportRoutes.js
-    │   └── utils/
-    │       └── emailService.js
-    ├── BluePrint&Info/
-    │   ├── AdditionalFeatures.md
-    │   ├── softwarePipeline.md
-    │   ├── step1.md
-    │   ├── step2.md
-    │   ├── step3.md
-    │   ├── step4.md
-    │   ├── step5.md
-    │   ├── step6.md
-    │   └── step7.md
-    └── ErrorX/
-        ├── README.md
-        ├── eslint.config.js
-        ├── index.html
+    │   ├── public/
+    │   └── src/
+    │       ├── App.jsx
+    │       ├── index.css
+    │       ├── main.jsx
+    │       ├── assets/
+    │       │   └── images/
+    │       ├── components/
+    │       │   ├── AvatarGroup.jsx
+    │       │   ├── DeleteAlert.jsx
+    │       │   ├── Modal.jsx
+    │       │   ├── Progress.jsx
+    │       │   ├── TaskListTable.jsx
+    │       │   ├── TaskStatusTabs.jsx
+    │       │   ├── UserAvatar.jsx
+    │       │   ├── Cards/
+    │       │   │   ├── InfoCard.jsx
+    │       │   │   ├── TaskCard.jsx
+    │       │   │   └── UserCard.jsx
+    │       │   ├── Charts/
+    │       │   │   ├── CustomBarChart.jsx
+    │       │   │   ├── CustomLegend.jsx
+    │       │   │   ├── CustomPieChart.jsx
+    │       │   │   └── CustomToolTip.jsx
+    │       │   ├── Comments/
+    │       │   │   └── CommentSection.jsx
+    │       │   ├── Inputs/
+    │       │   │   ├── AddAttachmentsInput.jsx
+    │       │   │   ├── Input.jsx
+    │       │   │   ├── ProfilePhotoSelector.jsx
+    │       │   │   ├── SelectDropdown.jsx
+    │       │   │   ├── SelectUsers.jsx
+    │       │   │   └── ToDoListInput.jsx
+    │       │   ├── layouts/
+    │       │   │   ├── AuthLayout.jsx
+    │       │   │   ├── DashboardLayout.jsx
+    │       │   │   ├── Footer.jsx
+    │       │   │   ├── MainLayout.jsx
+    │       │   │   ├── Navbar.jsx
+    │       │   │   ├── Navigation.jsx
+    │       │   │   ├── SideMenu.jsx
+    │       │   │   └── ThemeToggle.jsx
+    │       │   ├── Reminders/
+    │       │   │   ├── NotificationBell.jsx
+    │       │   │   └── ReminderForm.jsx
+    │       │   └── TimeTracking/
+    │       │       └── TimeTracker.jsx
+    │       ├── context/
+    │       │   ├── ChatContext.jsx
+    │       │   └── userContext.jsx
+    │       ├── hooks/
+    │       │   └── useUserAuth.jsx
+    │       ├── pages/
+    │       │   ├── Admin/
+    │       │   │   ├── AdminBugDashboard.jsx
+    │       │   │   ├── CreateTask.jsx
+    │       │   │   ├── Dashboard.jsx
+    │       │   │   ├── ManageTasks.jsx
+    │       │   │   └── ManageUsers.jsx
+    │       │   ├── Auth/
+    │       │   │   ├── ForgotPassword.jsx
+    │       │   │   ├── Login.jsx
+    │       │   │   ├── ResetPassword.jsx
+    │       │   │   └── Signup.jsx
+    │       │   ├── Bug/
+    │       │   │   └── BugDetails.jsx
+    │       │   ├── Bugs/
+    │       │   │   └── BugDetails.jsx
+    │       │   ├── Chat/
+    │       │   │   ├── ChatPage.jsx
+    │       │   │   └── components/
+    │       │   │       ├── ChatInput.jsx
+    │       │   │       ├── ChatMessages.jsx
+    │       │   │       ├── ChatSettingsModal.jsx
+    │       │   │       ├── ChatSidebar.jsx
+    │       │   │       ├── CreateChatModal.jsx
+    │       │   │       └── MessageItem.jsx
+    │       │   ├── Company/
+    │       │   │   ├── About.jsx
+    │       │   │   └── Contact.jsx
+    │       │   ├── Features/
+    │       │   │   └── Features.jsx
+    │       │   ├── Landing/
+    │       │   │   └── LandingPage.jsx
+    │       │   ├── NotFound/
+    │       │   │   └── NotFound.jsx
+    │       │   ├── Pricing/
+    │       │   │   └── PricingPage.jsx
+    │       │   ├── Terms/
+    │       │   │   ├── DataStoragePolicy.jsx
+    │       │   │   ├── PrivacyPolicy.jsx
+    │       │   │   └── TermsOfService.jsx
+    │       │   └── User/
+    │       │       ├── DeveloperDashboard.jsx
+    │       │       ├── MyTasks.jsx
+    │       │       ├── TesterDashboard.jsx
+    │       │       ├── UserDashboard.jsx
+    │       │       ├── UserSettings.jsx
+    │       │       └── ViewTaskDetails.jsx
+    │       ├── routes/
+    │       │   ├── index.jsx
+    │       │   └── PrivateRoute.jsx
+    │       └── utils/
+    │           ├── apiPaths.js
+    │           ├── axiosInstance.js
+    │           ├── data.js
+    │           ├── helper.js
+    │           └── uploadImage.js
+    └── server/
         ├── package-lock.json
         ├── package.json
-        ├── postcss.config.js
-        ├── tailwind.config.js
-        ├── vite.config.js
-        ├── .gitignore
-        ├── public/
-        └── src/
-            ├── README.md
-            ├── App.css
-            ├── App.jsx
-            ├── index.css
-            ├── main.jsx
-            ├── assets/
-            ├── components/
-            │   ├── Analytics.jsx
-            │   ├── BugDetails.jsx
-            │   ├── Header.jsx
-            │   ├── Layout.jsx
-            │   ├── SearchModal.jsx
-            │   └── Sidebar.jsx
-            ├── pages/
-            │   ├── AdminDashboard.jsx
-            │   ├── Dashboard.jsx
-            │   ├── DeveloperDashboard.jsx
-            │   ├── Issues.jsx
-            │   ├── LandingPage.jsx
-            │   ├── Login.jsx
-            │   ├── Projects.jsx
-            │   ├── Signup.jsx
-            │   └── TesterDashboard.jsx
-            ├── routes/
-            │   └── index.jsx
-            └── store/
-                └── bugStore.js
+        ├── server.js
+        ├── config/
+        │   └── db.js
+        ├── controllers/
+        │   ├── attachmentController.js
+        │   ├── authController.js
+        │   ├── bugController.js
+        │   ├── chatController.js
+        │   ├── commentController.js
+        │   ├── reminderController.js
+        │   ├── reportController.js
+        │   ├── taskController.js
+        │   └── userController.js
+        ├── middlewares/
+        │   ├── authMiddleware.js
+        │   └── uploadMiddleware.js
+        ├── models/
+        │   ├── Attachment.js
+        │   ├── Bug.js
+        │   ├── Chat.js
+        │   ├── Comment.js
+        │   ├── Message.js
+        │   ├── Reminder.js
+        │   ├── Task.js
+        │   └── User.js
+        ├── routes/
+        │   ├── attachmentRoutes.js
+        │   ├── authRoutes.js
+        │   ├── bugRoutes.js
+        │   ├── chatRoutes.js
+        │   ├── commentRoutes.js
+        │   ├── reminderRoutes.js
+        │   ├── reportRoutes.js
+        │   ├── taskRoutes.js
+        │   └── userRoutes.js
+        └── uploads/
+            ├── attachments-1745157410983-744837053.txt
+            ├── chats/
+            │   ├── attachments-1745168644765-714386817.txt
+            │   ├── attachments-1745168670823-831745076.txt
+            │   └── attachments-1745171040229-512460243.txt
+            └── profiles/
 
 ```
 
