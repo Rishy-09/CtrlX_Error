@@ -63,27 +63,27 @@ const Signup = () => {
 
         setError("");
 
-        // Upload image if present
-        let profileImageURL = '';
+        // Create FormData for registration with profile image if available
+        const formData = new FormData();
+        formData.append('name', fullName);
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('role', role);
+        
+        if (role === "admin" && adminInviteToken) {
+          formData.append('adminInviteToken', adminInviteToken);
+        }
+        
+        // Append profile image if it exists
         if (profilePic) {
-          try {
-            const imgUploadRes = await uploadImage(profilePic);
-            profileImageURL = imgUploadRes.imageURL || "";
-          } catch (uploadError) {
-            console.error("Error uploading profile image:", uploadError);
-            // Continue registration without profile image if upload fails
-            toast.error("Failed to upload profile image, continuing without it");
-          }
+          formData.append('profileImage', profilePic);
         }
 
-        // Registration API Call
-        const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, {
-          name: fullName,
-          email,
-          password,
-          profileImageURL,
-          role,
-          adminInviteToken: role === "admin" ? adminInviteToken : undefined,
+        // Registration API Call with FormData
+        const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         });
 
         const { token, role: userRole } = response.data;
@@ -102,7 +102,7 @@ const Signup = () => {
             navigate("/user/dashboard");
           }
         }
-      }
+      } 
       catch (error) {
         console.error("Registration error:", error);
         if (error.response && error.response.data && error.response.data.message) {

@@ -44,6 +44,16 @@ const UserSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        notificationSettings: {
+            type: Object,
+            default: {
+                emailNotifications: true,
+                taskAssigned: true,
+                taskUpdated: true,
+                commentMention: true,
+                deadlineReminder: true
+            }
+        },
         lastLogin: {
             type: Date,
             default: Date.now

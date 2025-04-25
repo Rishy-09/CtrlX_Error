@@ -72,6 +72,7 @@ const App = () => {
                 <Route path="/admin/chat" element={<ChatPage />} />
                 <Route path="/admin/chat/:chatId" element={<ChatPage />} />
                 <Route path="/admin/settings" element={<UserSettings />} />
+                <Route path="/admin/profile" element={<Navigate to="/admin/settings" replace />} />
               </Route>
 
               {/*User Routes*/}

@@ -1,15 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import { FaCamera, FaUser, FaTrashAlt } from 'react-icons/fa';
+import { UserContext } from '../../context/userContext';
 
-// Default profile image to use when user doesn't have a profile picture
-const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dykjpvgga/image/upload/v1674645487/a9ljktjl3o8f2fbwm2kt.jpg";
+// Helper function to generate avatar URL
+const getAvatarUrl = (name) => {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
+};
 
-const ProfilePhotoSelector = ({ currentImage, onChange }) => {
+const ProfilePhotoSelector = ({ currentImage, onChange, image, setImage }) => {
+  const { user } = useContext(UserContext);
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Generate default avatar based on user name
+  const defaultAvatar = getAvatarUrl(user?.name);
+
   // Determine what image to display
-  const displayImage = preview || currentImage || DEFAULT_PROFILE_IMAGE;
+  // If image prop is provided (for Signup), use that, otherwise use currentImage (for Profile)
+  const displayImage = preview || image || currentImage || defaultAvatar;
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -30,7 +38,9 @@ const ProfilePhotoSelector = ({ currentImage, onChange }) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result);
-      onChange(reader.result);
+      // Use either onChange or setImage based on what was provided
+      if (onChange) onChange(file);
+      if (setImage) setImage(file);
     };
     reader.readAsDataURL(file);
   };
@@ -41,7 +51,9 @@ const ProfilePhotoSelector = ({ currentImage, onChange }) => {
 
   const removeImage = () => {
     setPreview(null);
-    onChange(DEFAULT_PROFILE_IMAGE);
+    // Use either onChange or setImage based on what was provided
+    if (onChange) onChange(null);
+    if (setImage) setImage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -55,6 +67,10 @@ const ProfilePhotoSelector = ({ currentImage, onChange }) => {
             src={displayImage} 
             alt="Profile" 
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = defaultAvatar;
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -88,7 +104,7 @@ const ProfilePhotoSelector = ({ currentImage, onChange }) => {
           Change Photo
         </button>
         
-        {(preview || (currentImage && currentImage !== DEFAULT_PROFILE_IMAGE)) && (
+        {(preview || (currentImage && currentImage !== defaultAvatar)) && (
           <button
             type="button"
             onClick={removeImage}

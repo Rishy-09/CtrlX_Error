@@ -1,6 +1,15 @@
 import Bug from "../models/Bug.js";
 import Attachment from "../models/Attachment.js";
 import Comment from "../models/Comment.js";
+import User from "../models/User.js";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // @desc    Get all bugs (Admin/Developer: all, Tester: only reported bugs)
 // @route   GET /api/bugs/
