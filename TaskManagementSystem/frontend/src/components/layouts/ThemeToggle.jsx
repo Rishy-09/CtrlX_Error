@@ -1,16 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { FaSun, FaMoon } from 'react-icons/fa';
 
-const ThemeToggle = ({ showLabel = false }) => {
+const ThemeToggle = ({ showLabel = false, onChange = null, initialValue = null }) => {
   const [darkMode, setDarkMode] = useState(
-    localStorage.getItem('theme') === 'dark' || 
-    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    initialValue !== null ? initialValue : (
+      localStorage.getItem('theme') === 'dark' || 
+      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    )
   );
 
   useEffect(() => {
     // Apply the theme when component mounts and when darkMode changes
     applyTheme(darkMode);
-  }, [darkMode]);
+    
+    // Call onChange if provided
+    if (onChange && typeof onChange === 'function') {
+      onChange(darkMode);
+    }
+  }, [darkMode, onChange]);
+  
+  // Update when initialValue changes (for controlled components)
+  useEffect(() => {
+    if (initialValue !== null) {
+      setDarkMode(initialValue);
+    }
+  }, [initialValue]);
 
   const applyTheme = (isDark) => {
     // Update HTML class for Tailwind dark mode
@@ -42,6 +56,8 @@ const ThemeToggle = ({ showLabel = false }) => {
           darkMode ? 'bg-primary' : 'bg-gray-300'
         }`}
         aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        role="switch"
+        aria-checked={darkMode}
       >
         <span
           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

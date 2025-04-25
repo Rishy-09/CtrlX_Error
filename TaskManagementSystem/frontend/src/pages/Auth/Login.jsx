@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import Input from "../../components/Inputs/Input.jsx";
 import { validateEmail } from "../../utils/helper.js";
 import { UserContext } from "../../context/userContext.jsx";
-import axiosInstance from "../../utils/axiosInstance.js";
+import axiosInstance, { resetSessionExpiredFlag } from "../../utils/axiosInstance.js";
 import {API_PATHS} from "../../utils/apiPaths.js";
 import { toast } from "react-hot-toast";
 
@@ -47,14 +47,24 @@ const Login = () => {
         localStorage.setItem("token", token); // Store token in local storage
         updateUser(response.data); // Update user context
         
+        // Reset session expired flag when successfully logged in
+        resetSessionExpiredFlag();
+        
         // Show success message
         toast.success('Login successful!');
         
-        // Redirect based on role
-        if (role === "admin") {
-          navigate("/admin/dashboard");
-        } else if (role === "developer" || role === "tester") {
-          navigate("/user/dashboard");
+        // Check if there's a redirect URL saved
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin'); // Clear it after use
+          navigate(redirectPath);
+        } else {
+          // Default redirect based on role
+          if (role === "admin") {
+            navigate("/admin/dashboard");
+          } else if (role === "developer" || role === "tester") {
+            navigate("/user/dashboard");
+          }
         }
       }
     } catch (error) {
