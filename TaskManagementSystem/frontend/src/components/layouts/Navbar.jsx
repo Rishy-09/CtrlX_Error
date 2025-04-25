@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiMenu, FiX, FiChevronLeft, FiUser, FiSettings, FiLogOut } from 'react-icons/fi';
 import { UserContext } from '../../context/userContext';
@@ -7,6 +7,7 @@ const Navbar = () => {
   const { user, clearUser } = useContext(UserContext);
   const [isOpen, setIsOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -19,6 +20,22 @@ const Navbar = () => {
     location.pathname === '/login' ||
     location.pathname === '/signup'
   );
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    }
+    
+    // Add event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      // Clean up event listener
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -41,6 +58,15 @@ const Navbar = () => {
   const getBasePath = () => {
     if (!user) return '/';
     return user.role === 'admin' ? '/admin' : '/user';
+  };
+
+  // Get correct profile and settings paths based on user role
+  const getProfilePath = () => {
+    return `${getBasePath()}/profile`;
+  };
+
+  const getSettingsPath = () => {
+    return `${getBasePath()}/settings`;
   };
   
   return (
@@ -111,37 +137,42 @@ const Navbar = () => {
           <div className="flex items-center">
             {/* User Profile Menu */}
             {user ? (
-              <div className="relative ml-3">
+              <div className="relative ml-3" ref={userMenuRef}>
                 <button
                   onClick={toggleUserMenu}
-                  className="flex items-center text-sm rounded-full focus:outline-none"
+                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  aria-expanded={showUserMenu}
+                  aria-haspopup="true"
                 >
                   <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
                     <img
                       src={user.profileImageURL || "https://via.placeholder.com/150?text=User"}
                       alt="User"
                       className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/150?text=User";
+                      }}
                     />
                   </div>
                 </button>
                 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
+                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                     <div className="py-1">
                       <div className="px-4 py-2 border-b dark:border-gray-700">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                       <Link
-                        to={`/user/profile`}
+                        to={getProfilePath()}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => setShowUserMenu(false)}
                       >
                         <FiUser className="mr-2" /> Profile
                       </Link>
                       <Link
-                        to={`/user/settings`}
+                        to={getSettingsPath()}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => setShowUserMenu(false)}
                       >
@@ -178,6 +209,8 @@ const Navbar = () => {
             <button
               onClick={toggleMenu}
               className="ml-2 md:hidden p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-expanded={isOpen}
+              aria-label="Toggle menu"
             >
               {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
@@ -213,7 +246,7 @@ const Navbar = () => {
                   Chat
                 </Link>
                 <Link
-                  to="/user/settings"
+                  to={getSettingsPath()}
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={toggleMenu}
                 >
@@ -254,7 +287,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/signup"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 px-4 py-2 m-2 rounded-md hover:bg-blue-700"
                   onClick={toggleMenu}
                 >
                   Sign Up

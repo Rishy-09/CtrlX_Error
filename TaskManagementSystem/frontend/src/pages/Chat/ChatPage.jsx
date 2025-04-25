@@ -112,14 +112,33 @@ const ChatPage = () => {
       
       // Set up polling for new messages - especially important for AI responses
       const interval = setInterval(() => {
-        if (activeChat.aiAssistant?.enabled) {
-          fetchMessages(activeChat._id);
+        // Only fetch if AI is enabled and we're not already loading messages
+        if (activeChat.aiAssistant?.enabled && !messagesLoading && !sendingMessage) {
+          // Keep track of last message ID to avoid duplicate UI updates
+          const lastMessageId = messages.length > 0 ? messages[messages.length - 1]._id : null;
+          fetchMessages(activeChat._id)
+            .then(newMessages => {
+              // Check if we received new messages to avoid false UI updates
+              if (newMessages && newMessages.length > 0 && 
+                  lastMessageId !== newMessages[newMessages.length - 1]._id) {
+                // Only show notification if there's a new AI message
+                const hasNewAIMessage = newMessages.some(msg => 
+                  (msg.isAIMessage || msg.sender.isAI) && 
+                  !messages.some(existingMsg => existingMsg._id === msg._id)
+                );
+                
+                if (hasNewAIMessage) {
+                  // Silent UI update without toast notification
+                  // as the messages will appear in the chat
+                }
+              }
+            });
         }
       }, 5000); // Poll every 5 seconds - only if AI is enabled
       
       return () => clearInterval(interval);
     }
-  }, [activeChat, fetchMessages, messages.length]);
+  }, [activeChat, fetchMessages, messages, messagesLoading, sendingMessage]);
   
   // Handle sending a message
   const handleSendMessage = async (messageData) => {
@@ -236,6 +255,12 @@ const ChatPage = () => {
         className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
         style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 160px)' }}
       >
+        {messagesLoading && messages.length > 0 && (
+          <div className="flex justify-center my-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+          </div>
+        )}
+        
         {messages.map((message) => (
           <MessageItem 
             key={message._id} 

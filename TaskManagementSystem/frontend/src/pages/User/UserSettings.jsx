@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { UserContext } from '../../context/userContext';
 import { 
   FiUser, 
@@ -22,6 +22,7 @@ const UserSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem('theme') === 'dark' || 
     (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -69,8 +70,15 @@ const UserSettings = () => {
         email: user.email || '',
         profileImageURL: user.profileImageURL || ''
       });
-      setProfileImage(user.profileImageURL || null);
+      setPreviewUrl(user.profileImageURL || null);
     }
+
+    // Cleanup preview URL when component unmounts
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
   }, [user]);
   
   // Profile update handlers
@@ -82,17 +90,19 @@ const UserSettings = () => {
     }));
   };
   
-  const handleProfileImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleProfileImageChange = (file) => {
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage({
-          file,
-          preview: reader.result
-        });
-      };
-      reader.readAsDataURL(file);
+      // Revoke previous preview URL to avoid memory leaks
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      // Create a new preview URL
+      const newPreviewUrl = URL.createObjectURL(file);
+      setPreviewUrl(newPreviewUrl);
+      
+      // Set the profile image file for upload
+      setProfileImage(file);
     }
   };
   
@@ -106,8 +116,8 @@ const UserSettings = () => {
       formData.append('name', profileData.name);
       formData.append('email', profileData.email);
       
-      if (profileImage && profileImage.file) {
-        formData.append('profileImage', profileImage.file);
+      if (profileImage) {
+        formData.append('profileImage', profileImage);
       }
       
       const response = await axiosInstance.put(
@@ -120,15 +130,25 @@ const UserSettings = () => {
         }
       );
       
+      // Check for response data structure
+      const userData = response.data.user || response.data;
+      
       // Update context with new user data
       updateUser({
         ...user,
-        name: response.data.name,
-        email: response.data.email,
-        profileImageURL: response.data.profileImageURL
+        name: userData.name,
+        email: userData.email,
+        profileImageURL: userData.profileImageURL || userData.profileImageUrl
       });
       
-      // Reset profile pic state
+      // Update local state
+      setProfileData({
+        name: userData.name,
+        email: userData.email,
+        profileImageURL: userData.profileImageURL || userData.profileImageUrl
+      });
+      
+      // Reset profile pic state but keep the current image URL
       setProfileImage(null);
       
       toast.success('Profile updated successfully');
@@ -166,7 +186,7 @@ const UserSettings = () => {
     setLoading(true);
     
     try {
-      await axiosInstance.post('/api/auth/change-password', {
+      await axiosInstance.post(API_PATHS.AUTH.RESET_PASSWORD, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
       });
@@ -200,7 +220,9 @@ const UserSettings = () => {
     
     try {
       // Save notification settings to backend
-      await axiosInstance.post('/api/users/notifications/settings', notificationSettings);
+      await axiosInstance.put(`${API_PATHS.USERS.UPDATE_USER(user._id)}/notification-settings`, {
+        settings: notificationSettings
+      });
       toast.success('Notification settings saved');
     } catch (error) {
       console.error('Error saving notification settings:', error);
@@ -208,11 +230,6 @@ const UserSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
-  
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
   };
   
   // Render tab content based on active tab
@@ -224,15 +241,15 @@ const UserSettings = () => {
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
-                  {profileImage?.preview ? (
+                  {previewUrl ? (
                     <img 
-                      src={profileImage.preview} 
+                      src={previewUrl} 
                       alt="Profile" 
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <img 
-                      src={profileData.profileImageURL || 'https://via.placeholder.com/150?text=User'} 
+                      src="https://via.placeholder.com/150?text=User" 
                       alt="Profile" 
                       className="w-full h-full object-cover"
                     />
@@ -249,7 +266,7 @@ const UserSettings = () => {
                   id="profile-image" 
                   className="hidden" 
                   accept="image/*"
-                  onChange={handleProfileImageChange}
+                  onChange={(e) => handleProfileImageChange(e.target.files[0])}
                 />
               </div>
               <div>
@@ -332,6 +349,41 @@ const UserSettings = () => {
               </button>
             </div>
           </form>
+        );
+        
+      case 'appearance':
+        return (
+          <div className="space-y-6">
+            <div className="p-4 bg-white dark:bg-gray-800 shadow rounded-lg">
+              <h3 className="text-lg font-medium mb-4">Theme Settings</h3>
+              
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="font-medium">Toggle Dark Mode</p>
+                  <p className="text-sm text-gray-500">Switch between light and dark themes</p>
+                </div>
+                <ThemeToggle 
+                  showLabel={true} 
+                  initialValue={darkMode}
+                  onChange={setDarkMode}
+                />
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    // Save theme preference to localStorage
+                    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+                    toast.success('Theme settings saved');
+                  }}
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
         );
         
       case 'notifications':
@@ -450,6 +502,18 @@ const UserSettings = () => {
               >
                 <FiLock />
                 <span>Password</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('appearance')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-md transition-colors ${
+                  activeTab === 'appearance' 
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <FiSun />
+                <span>Appearance</span>
               </button>
               
               <button

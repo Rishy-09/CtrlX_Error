@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FiSend, FiPaperclip, FiX, FiSmile } from 'react-icons/fi';
 import TextareaAutosize from 'react-textarea-autosize';
 import Picker from 'emoji-picker-react';
@@ -8,13 +8,14 @@ const ChatInput = ({ onSendMessage, disabled }) => {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const textareaRef = useRef(null);
 
   // Close emoji picker when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
         setShowEmojiPicker(false);
@@ -27,6 +28,13 @@ const ChatInput = ({ onSendMessage, disabled }) => {
     };
   }, []);
 
+  // Reset isSending when disabled changes
+  useEffect(() => {
+    if (!disabled && isSending) {
+      setIsSending(false);
+    }
+  }, [disabled]);
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -34,10 +42,12 @@ const ChatInput = ({ onSendMessage, disabled }) => {
     }
   };
 
-  const handleSendMessage = () => {
-    if ((!message.trim() && attachments.length === 0) || isUploading || disabled) return;
+  const handleSendMessage = async () => {
+    if ((!message.trim() && attachments.length === 0) || isUploading || disabled || isSending) return;
     
     try {
+      setIsSending(true);
+      
       // Create a messageData object with content and attachments
       const messageData = {
         content: message.trim(),
@@ -45,7 +55,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
       };
       
       // Call the onSendMessage function from the parent component
-      onSendMessage(messageData);
+      await onSendMessage(messageData);
       
       // Reset input state
       setMessage('');
@@ -53,6 +63,8 @@ const ChatInput = ({ onSendMessage, disabled }) => {
     } catch (error) {
       console.error('Error sending message with attachments:', error);
       toast.error('Failed to send message with attachments');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -90,9 +102,6 @@ const ChatInput = ({ onSendMessage, disabled }) => {
       }));
       
       setAttachments(prevAttachments => [...prevAttachments, ...newAttachments]);
-      
-      // Log for debugging
-      console.log('Attachments added:', newAttachments);
     } catch (error) {
       console.error('Error adding attachments:', error);
       toast.error('Failed to add attachment');
@@ -135,6 +144,8 @@ const ChatInput = ({ onSendMessage, disabled }) => {
     }, 10);
   };
 
+  const isButtonDisabled = (!message.trim() && attachments.length === 0) || isUploading || disabled || isSending;
+
   return (
     <div className="border-t p-3">
       {/* Attachments preview */}
@@ -160,6 +171,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
               <button
                 onClick={() => removeAttachment(index)}
                 className="text-gray-600 hover:text-red-500"
+                disabled={isSending}
               >
                 <FiX size={16} />
               </button>
@@ -172,7 +184,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
         {/* Attachment button */}
         <button
           onClick={handleAttachmentClick}
-          disabled={disabled || attachments.length >= 5}
+          disabled={disabled || attachments.length >= 5 || isSending}
           className="text-gray-500 hover:text-blue-500 disabled:opacity-50 p-2"
           title="Attach file"
         >
@@ -187,6 +199,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
           multiple
           className="hidden"
           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+          disabled={isSending}
         />
         
         {/* Emoji button */}
@@ -195,6 +208,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="text-gray-500 hover:text-blue-500 p-2"
             title="Add emoji"
+            disabled={isSending}
           >
             <FiSmile size={20} />
           </button>
@@ -221,7 +235,7 @@ const ChatInput = ({ onSendMessage, disabled }) => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          disabled={disabled}
+          disabled={disabled || isSending}
           className="message-input flex-grow p-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 max-h-[150px]"
           minRows={1}
           maxRows={6}
@@ -230,15 +244,19 @@ const ChatInput = ({ onSendMessage, disabled }) => {
         {/* Send button */}
         <button
           onClick={handleSendMessage}
-          disabled={(!message.trim() && attachments.length === 0) || isUploading || disabled}
+          disabled={isButtonDisabled}
           className={`p-2 rounded-full ${
-            (!message.trim() && attachments.length === 0) || isUploading || disabled
+            isButtonDisabled
               ? 'text-gray-400 bg-gray-100'
               : 'text-white bg-blue-500 hover:bg-blue-600'
           }`}
           title="Send message"
         >
-          <FiSend size={20} />
+          {isSending ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <FiSend size={20} />
+          )}
         </button>
       </div>
     </div>
