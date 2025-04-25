@@ -1,78 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { FaSun, FaMoon } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
-const ThemeToggle = ({ showLabel = false, onChange = null, initialValue = null }) => {
+const ThemeToggle = () => {
   const [darkMode, setDarkMode] = useState(
-    initialValue !== null ? initialValue : (
-      localStorage.getItem('theme') === 'dark' || 
-      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    )
+    localStorage.getItem('theme') === 'dark' || 
+    (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
   );
 
   useEffect(() => {
-    // Apply the theme when component mounts and when darkMode changes
-    applyTheme(darkMode);
-    
-    // Call onChange if provided
-    if (onChange && typeof onChange === 'function') {
-      onChange(darkMode);
-    }
-  }, [darkMode, onChange]);
-  
-  // Update when initialValue changes (for controlled components)
-  useEffect(() => {
-    if (initialValue !== null) {
-      setDarkMode(initialValue);
-    }
-  }, [initialValue]);
-
-  const applyTheme = (isDark) => {
-    // Update HTML class for Tailwind dark mode
-    if (isDark) {
+    // Apply theme on initial load
+    if (darkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
-  };
+
+    // Listen for changes to the prefers-color-scheme media query
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      // Only auto-change if the user hasn't manually set a preference
+      if (!localStorage.getItem('theme')) {
+        setDarkMode(e.matches);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [darkMode]);
 
   const toggleTheme = () => {
-    setDarkMode(!darkMode);
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    
+    // Show confirmation message
+    toast.success(`${newMode ? 'Dark' : 'Light'} theme activated`);
   };
 
   return (
-    <div className="flex items-center">
-      {showLabel && (
-        <div className="flex items-center mr-2">
-          <FaSun className={`text-yellow-500 mr-2 ${darkMode ? 'opacity-50' : 'opacity-100'}`} />
-          <span className="text-gray-800 dark:text-gray-200">Light</span>
-        </div>
+    <button
+      onClick={toggleTheme}
+      className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+      aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {darkMode ? (
+        <FaSun className="text-yellow-500" size={18} />
+      ) : (
+        <FaMoon className="text-indigo-600" size={18} />
       )}
-      
-      <button
-        onClick={toggleTheme}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-          darkMode ? 'bg-primary' : 'bg-gray-300'
-        }`}
-        aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-        role="switch"
-        aria-checked={darkMode}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            darkMode ? 'translate-x-6' : 'translate-x-1'
-          }`}
-        />
-      </button>
-      
-      {showLabel && (
-        <div className="flex items-center ml-2">
-          <FaMoon className={`text-blue-700 mr-2 ${darkMode ? 'opacity-100' : 'opacity-50'}`} />
-          <span className="text-gray-800 dark:text-gray-200">Dark</span>
-        </div>
-      )}
-    </div>
+    </button>
   );
 };
 

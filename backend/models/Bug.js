@@ -1,154 +1,134 @@
 import mongoose from "mongoose";
 
-const todoSchema = new mongoose.Schema(
-    {
-        text: {
-            type: String,
-            required: true,
+const BugSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, "Title is required"],
+      trim: true,
+      maxlength: [100, "Title cannot be more than 100 characters"]
+    },
+    description: {
+      type: String,
+      required: [true, "Description is required"],
+      trim: true,
+      maxlength: [5000, "Description cannot be more than 5000 characters"]
+    },
+    steps: {
+      type: String,
+      trim: true,
+      maxlength: [5000, "Steps to reproduce cannot be more than 5000 characters"]
+    },
+    status: {
+      type: String,
+      enum: ["Open", "In Progress", "Testing", "Closed", "Reopened"],
+      default: "Open"
+    },
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High", "Critical"],
+      default: "Medium"
+    },
+    severity: {
+      type: String,
+      enum: ["Minor", "Major", "Critical", "Blocker"],
+      default: "Minor"
+    },
+    reporter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    todoChecklist: [
+      {
+        item: {
+          type: String,
+          required: true
         },
         completed: {
-            type: Boolean,
-            default: false,
+          type: Boolean,
+          default: false
         },
-    }
-);
-
-const bugSchema = new mongoose.Schema(
-    {
-        title: {
-            type: String,
-            required: true,
+        completedAt: {
+          type: Date,
+          default: null
         },
-        description: {
-            type: String,
-            default: null,
-        },
-        priority: {
-            type: String,
-            enum: ["Low", "Medium", "High", "Critical"],
-            default: "Medium",
-        },
-        severity: {
-            type: String,
-            enum: ["Minor", "Major", "Critical", "Blocker"],
-            default: "Minor",
-        },
-        status: {
-            type: String,
-            enum: ["Open", "In Progress", "Testing", "Closed", "Reopened"],
-            default: "Open",
-        },
-        bugType: {
-            type: String,
-            enum: ["Functional", "UI/UX", "Performance", "Security", "Compatibility", "Other"],
-            default: "Functional",
-        },
-        environment: {
-            type: String,
-            enum: ["Development", "Staging", "Production"],
-            default: "Development",
-        },
-        version: {
-            type: String,
-            default: "1.0",
-        },
-        dueDate: {
-            type: Date,
-            required: false,
-        },
-        reporter: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-        assignedTo: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            }
-        ],
-        watchers: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            }
-        ],
-        stepsToReproduce: {
-            type: String,
-            default: "",
-        },
-        attachments: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Attachment",
-            }
-        ],
-        todoChecklist: [
-            todoSchema
-        ],
-        progress: {
-            type: Number,
-            default: 0,
-        },
-        comments: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Comment",
-            }
-        ],
-        timeEntries: [
-            {
-                startTime: {
-                    type: Date,
-                    required: true
-                },
-                endTime: {
-                    type: Date,
-                    default: null
-                },
-                duration: {
-                    type: Number, // Duration in minutes
-                    default: 0
-                },
-                description: {
-                    type: String,
-                    default: ""
-                },
-                user: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: "User",
-                    required: true
-                }
-            }
-        ],
-        totalTimeSpent: {
-            type: Number, // Total time spent in minutes
-            default: 0
-        },
-        dependencies: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Bug"
-            }
-        ],
-        blockedBy: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Bug"
-            }
-        ]
+        completedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null
+        }
+      }
+    ],
+    progress: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
     },
-    { 
-        timestamps: true 
+    attachments: [
+      {
+        filename: String,
+        path: String,
+        mimetype: String,
+        size: Number,
+        uploadedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    environment: {
+      type: String,
+      trim: true
+    },
+    browser: {
+      type: String,
+      trim: true
+    },
+    os: {
+      type: String,
+      trim: true
+    },
+    version: {
+      type: String,
+      trim: true
+    },
+    dueDate: {
+      type: Date,
+      default: null
+    },
+    closedAt: {
+      type: Date,
+      default: null
+    },
+    closedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    bugType: {
+      type: String,
+      enum: ["Functional", "UI/UX", "Performance", "Security", "Compatibility", "Other"],
+      default: "Functional"
     }
+  },
+  {
+    timestamps: true
+  }
 );
 
 // Indexing for better performance
-bugSchema.index({ status: 1 });
-bugSchema.index({ priority: 1 });
-bugSchema.index({ assignedTo: 1 });
-bugSchema.index({ reporter: 1 });
-bugSchema.index({ createdAt: -1 });
+BugSchema.index({ status: 1 });
+BugSchema.index({ priority: 1 });
+BugSchema.index({ assignedTo: 1 });
+BugSchema.index({ reporter: 1 });
+BugSchema.index({ createdAt: -1 });
 
-const Bug = mongoose.model("Bug", bugSchema);
+const Bug = mongoose.model("Bug", BugSchema);
 export default Bug; 

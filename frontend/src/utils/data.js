@@ -37,7 +37,7 @@ export const SIDE_MENU_DATA = [
         id: "05",
         label: "Chat",
         icon: LuMessageCircle,
-        path: "/user/chat"
+        path: "/admin/chat"
     },
     {
         id: "06",

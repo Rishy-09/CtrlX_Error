@@ -12,6 +12,7 @@ const ResetPassword = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState(null);
+  const [tokenValidating, setTokenValidating] = useState(true);
   const [resetComplete, setResetComplete] = useState(false);
   
   const navigate = useNavigate();
@@ -22,19 +23,31 @@ const ResetPassword = () => {
   // Validate token on component mount
   useEffect(() => {
     const validateToken = async () => {
+      setTokenValidating(true);
+      
       if (!token || !email) {
         setTokenValid(false);
-        setError("Invalid or missing reset token");
+        setError("Invalid or missing reset token and/or email");
+        setTokenValidating(false);
         return;
       }
 
       try {
         await axiosInstance.get(`${API_PATHS.AUTH.RESET_PASSWORD}/validate?token=${token}&email=${email}`);
         setTokenValid(true);
+        setTokenValidating(false);
       } catch (error) {
         console.error("Token validation error:", error);
         setTokenValid(false);
-        setError("This password reset link is invalid or has expired");
+        
+        // Provide specific error messages based on the error
+        if (error.response && error.response.status === 400) {
+          setError(error.response.data.message || "This password reset link is invalid or has expired");
+        } else {
+          setError("Unable to validate reset token. Please request a new reset link.");
+        }
+        
+        setTokenValidating(false);
       }
     };
 
@@ -45,7 +58,9 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
+    // Password validation
     if (password.length < 6) {
       setError("Password must be at least 6 characters long");
       setLoading(false);
@@ -57,8 +72,6 @@ const ResetPassword = () => {
       setLoading(false);
       return;
     }
-
-    setError("");
 
     try {
       await axiosInstance.post(API_PATHS.AUTH.RESET_PASSWORD, {
@@ -76,10 +89,13 @@ const ResetPassword = () => {
       }, 3000);
     } catch (error) {
       console.error("Password reset error:", error);
+      
       if (error.response && error.response.data && error.response.data.message) {
         setError(error.response.data.message);
+      } else if (error.message === 'Network Error') {
+        setError("Network error. Please check your internet connection.");
       } else {
-        setError("Something went wrong. Please try again");
+        setError("Something went wrong. Please try again or request a new reset link.");
       }
     } finally {
       setLoading(false);
@@ -88,10 +104,11 @@ const ResetPassword = () => {
 
   // Show different states based on token validity and reset status
   const renderContent = () => {
-    if (tokenValid === null) {
+    if (tokenValidating) {
       return (
-        <div className="flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex flex-col items-center justify-center py-6">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-600">Validating reset token...</p>
         </div>
       );
     }
@@ -103,9 +120,23 @@ const ResetPassword = () => {
           <p className="text-sm text-red-600 mb-3">
             {error || "This password reset link is invalid or has expired."}
           </p>
-          <div className="mt-4">
-            <Link to="/forgot-password" className="btn-primary inline-block px-4 py-2 text-sm">
+          
+          <div className="mt-4 bg-gray-100 p-3 rounded-md border border-gray-300">
+            <p className="text-xs font-medium text-gray-700">Debug Information:</p>
+            <p className="text-xs text-gray-600 mb-1">
+              Token: <span className="font-mono">{token ? token.substring(0, 12) + '...' : 'Missing'}</span>
+            </p>
+            <p className="text-xs text-gray-600">
+              Email: <span className="font-mono">{email || 'Missing'}</span>
+            </p>
+          </div>
+          
+          <div className="mt-4 flex flex-col sm:flex-row gap-3">
+            <Link to="/forgot-password" className="bg-blue-500 text-white px-4 py-2 rounded-md text-sm text-center hover:bg-blue-600 transition-colors">
               Request a new reset link
+            </Link>
+            <Link to="/login" className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm text-center hover:bg-gray-100 transition-colors">
+              Return to login
             </Link>
           </div>
         </div>
@@ -119,7 +150,7 @@ const ResetPassword = () => {
           <p className="text-sm text-green-600 mb-3">
             Your password has been successfully reset. You will be redirected to the login page shortly.
           </p>
-          <Link to="/login" className="text-blue-600 text-sm hover:underline">
+          <Link to="/login" className="bg-blue-500 text-white px-4 py-2 rounded-md text-sm inline-block hover:bg-blue-600 transition-colors">
             Go to Login
           </Link>
         </div>
@@ -128,6 +159,12 @@ const ResetPassword = () => {
 
     return (
       <form onSubmit={handleSubmit}>
+        <div className="bg-blue-50 border border-blue-100 rounded-md p-3 mb-4">
+          <p className="text-sm text-blue-700">
+            <span className="font-medium">Email:</span> {email}
+          </p>
+        </div>
+        
         <Input
           value={password}
           onChange={({ target }) => setPassword(target.value)}
@@ -171,7 +208,7 @@ const ResetPassword = () => {
       <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify">
         <h3 className="text-xl font-semibold text-gray-800">Reset Password</h3>
         <p className="text-sm text-slate-500 mt-[5px] mb-6">
-          Enter your new password below
+          {tokenValid ? "Enter your new password below" : "Validating your reset token..."}
         </p>
 
         {renderContent()}

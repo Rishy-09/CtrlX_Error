@@ -62,13 +62,27 @@ const createChat = asyncHandler(async (req, res) => {
 const getChats = asyncHandler(async (req, res) => {
   const { type } = req.query;
 
-  let filter = {
-    participants: req.user._id
-  };
-
-  // Apply type filter if provided
-  if (type && ["public", "team", "private", "ai_assistant"].includes(type)) {
-    filter.chatType = type;
+  let filter = {};
+  
+  // If type is public, get all public chats
+  if (type === "public") {
+    filter = { chatType: "public" };
+  } 
+  // If type is specified but not public, filter by type and user participation
+  else if (type && ["team", "private", "ai_assistant"].includes(type)) {
+    filter = {
+      participants: req.user._id,
+      chatType: type
+    };
+  } 
+  // If no type specified, get all user's chats plus all public chats
+  else {
+    filter = {
+      $or: [
+        { participants: req.user._id },
+        { chatType: "public" }
+      ]
+    };
   }
 
   const chats = await Chat.find(filter)
@@ -100,25 +114,53 @@ const getChats = asyncHandler(async (req, res) => {
   res.json(chatsWithMetadata);
 });
 
-// @desc    Get single chat by ID
+// @desc    Get single chat by id
 // @route   GET /api/chats/:id
 // @access  Private
 const getChatById = asyncHandler(async (req, res) => {
   const chat = await Chat.findById(req.params.id)
     .populate("participants", "name email profileImageURL")
     .populate("admins", "name email profileImageURL")
-    .populate("associatedBug", "title status");
+    .populate("associatedBug", "title status")
+    .populate({
+      path: "messages",
+      options: { sort: { createdAt: -1 } },
+      populate: {
+        path: "sender",
+        select: "name email profileImageURL"
+      }
+    });
 
   if (!chat) {
     res.status(404);
     throw new Error("Chat not found");
   }
 
-  // Check if user is a participant
-  if (!chat.participants.some(p => p._id.toString() === req.user._id.toString())) {
+  // Allow access if chat is public OR user is a participant
+  const isPublic = chat.chatType === "public";
+  const isParticipant = chat.participants.some(p => p._id.toString() === req.user._id.toString());
+  
+  if (!isPublic && !isParticipant) {
     res.status(403);
-    throw new Error("Not authorized to access this chat");
+    throw new Error("You don't have permission to access this chat");
   }
+
+  // Mark all messages as read by this user
+  await Message.updateMany(
+    { 
+      chat: chat._id, 
+      "readBy.user": { $ne: req.user._id },
+      sender: { $ne: req.user._id }
+    },
+    { 
+      $addToSet: { 
+        readBy: { 
+          user: req.user._id, 
+          readAt: new Date() 
+        } 
+      } 
+    }
+  );
 
   res.json(chat);
 });
@@ -247,185 +289,158 @@ const deleteChat = asyncHandler(async (req, res) => {
   res.json({ message: "Chat deleted successfully" });
 });
 
-// @desc    Send a message
-// @route   POST /api/chats/:id/messages
+// @desc    Send a message to a chat
+// @route   POST /api/chats/:chatId/messages
 // @access  Private
 const sendMessage = asyncHandler(async (req, res) => {
-  try {
-    const { content } = req.body;
-    const mentions = req.body.mentions || [];
-    const replyTo = req.body.replyTo;
-    
-    // Check if content exists and is not just whitespace when no attachments are provided
-    if ((!content || content.trim() === "") && (!req.files || req.files.length === 0)) {
-      return res.status(400).json({
-        message: "Message content or attachment is required"
-      });
-    }
-    
-    const chat = await Chat.findById(req.params.id);
-    
-    if (!chat) {
-      return res.status(404).json({
-        message: "Chat not found"
-      });
-    }
-    
-    // Check if user is a participant
-    if (!chat.participants.some(p => p.toString() === req.user._id.toString())) {
-      return res.status(403).json({
-        message: "You are not a participant in this chat"
-      });
-    }
-    
-    // Validate reply if provided
-    if (replyTo) {
-      const replyExists = await Message.findOne({ 
-        _id: replyTo,
-        chat: chat._id
-      });
-      
-      if (!replyExists) {
-        return res.status(404).json({
-          message: "Reply message not found in this chat"
-        });
-      }
-    }
-    
-    // Process attachments if any
-    let attachmentIds = [];
-    if (req.files && req.files.length > 0) {
-      const attachmentPromises = req.files.map(async (file) => {
-        const attachment = await Attachment.create({
-          filename: file.filename,
-          originalFilename: file.originalname,
-          path: file.path,
-          mimetype: file.mimetype,
-          size: file.size,
-          uploadedBy: req.user._id
-        });
-        return attachment._id;
-      });
-      
-      attachmentIds = await Promise.all(attachmentPromises);
-    }
-    
-    // Create message
-    const message = await Message.create({
-      chat: chat._id,
-      sender: req.user._id,
-      content: content || "",
-      attachments: attachmentIds,
-      mentions: mentions,
-      readBy: [{ user: req.user._id }], // Mark as read by sender
-      replyTo: replyTo || null
-    });
-    
-    // Populate message
-    const populatedMessage = await Message.findById(message._id)
-      .populate("sender", "name email profileImageURL")
-      .populate("mentions", "name email profileImageURL")
-      .populate({
-        path: "replyTo",
-        populate: {
-          path: "sender",
-          select: "name profileImageURL"
-        }
-      })
-      .populate({
-        path: "attachments",
-        select: "filename originalFilename mimetype size"
-      });
-    
-    // Update chat's updatedAt
-    chat.updatedAt = Date.now();
-    await chat.save();
-    
-    // If AI assistant is enabled, generate response asynchronously
-    if (chat.aiAssistant && chat.aiAssistant.enabled) {
-      // Don't await this - let it run in the background
-      generateAIResponse(chat, populatedMessage).catch(err => 
-        console.error('Error generating AI response:', err)
-      );
-    }
-    
-    res.status(201).json(populatedMessage);
-  } catch (error) {
-    console.error('Error in sendMessage controller:', error);
-    res.status(500).json({
-      message: "Failed to send message",
-      error: error.message
-    });
-  }
-});
-
-// @desc    Get messages for a chat
-// @route   GET /api/chats/:id/messages
-// @access  Private
-const getMessages = asyncHandler(async (req, res) => {
-  const { limit = 50, before } = req.query;
+  const { content, attachments } = req.body;
   
-  const chat = await Chat.findById(req.params.id);
+  if (!content && (!attachments || attachments.length === 0)) {
+    res.status(400);
+    throw new Error("Message must have content or attachments");
+  }
+  
+  // Get the chat
+  const chat = await Chat.findById(req.params.chatId);
   
   if (!chat) {
     res.status(404);
     throw new Error("Chat not found");
   }
   
-  // Check if user is a participant
-  if (!chat.participants.includes(req.user._id)) {
+  // Check if user is a participant or if it's a public chat
+  const isParticipant = chat.participants.includes(req.user._id);
+  const isPublicChat = chat.chatType === 'public';
+  
+  if (!isParticipant && !isPublicChat) {
     res.status(403);
     throw new Error("You are not a participant in this chat");
   }
   
-  // Build query
-  let query = { 
-    chat: chat._id,
-    isDeleted: false
-  };
+  // Create message
+  const message = await Message.create({
+    sender: req.user._id,
+    content,
+    chat: req.params.chatId,
+    readBy: [{ user: req.user._id }]
+  });
   
-  // If before param is provided, get messages before that timestamp
-  if (before) {
-    query.createdAt = { $lt: new Date(before) };
+  // Process attachments if any
+  if (attachments && attachments.length > 0) {
+    const savedAttachments = [];
+    
+    for (const file of attachments) {
+      const attachment = await Attachment.create({
+        filename: file.filename,
+        originalname: file.originalname,
+        contentType: file.contentType,
+        size: file.size,
+        url: file.url,
+        uploader: req.user._id
+      });
+      
+      savedAttachments.push(attachment._id);
+    }
+    
+    message.attachments = savedAttachments;
+    await message.save();
   }
   
-  // Get messages
-  const messages = await Message.find(query)
+  // Populate message data for response
+  const populatedMessage = await Message.findById(message._id)
     .populate("sender", "name email profileImageURL")
-    .populate("mentions", "name email profileImageURL")
-    .populate({
-      path: "replyTo",
-      populate: {
-        path: "sender",
-        select: "name profileImageURL"
-      }
-    })
     .populate({
       path: "attachments",
-      select: "filename originalFilename mimetype size"
-    })
+      select: "filename originalname contentType size url createdAt"
+    });
+  
+  // Trigger AI response if the chat has an AI assistant enabled
+  if (chat.aiAssistant && chat.aiAssistant.enabled) {
+    // Process asynchronously so we don't block the response
+    generateAIResponse(chat, content).catch(err => 
+      console.error("Error generating AI response:", err)
+    );
+  }
+  
+  res.status(201).json(populatedMessage);
+});
+
+// @desc    Get messages from a chat
+// @route   GET /api/chats/:chatId/messages
+// @access  Private
+const getMessages = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 50 } = req.query;
+  const parsedPage = parseInt(page, 10);
+  const parsedLimit = parseInt(limit, 10);
+  
+  // Get the chat
+  const chat = await Chat.findById(req.params.chatId);
+  
+  if (!chat) {
+    res.status(404);
+    throw new Error("Chat not found");
+  }
+  
+  // Check if user is a participant or if it's a public chat
+  const isParticipant = chat.participants.includes(req.user._id);
+  const isPublicChat = chat.chatType === 'public';
+  
+  if (!isParticipant && !isPublicChat) {
+    res.status(403);
+    throw new Error("You are not a participant in this chat");
+  }
+  
+  // Calculate skip for pagination
+  const skip = (parsedPage - 1) * parsedLimit;
+  
+  // Get message count for this chat
+  const totalMessages = await Message.countDocuments({ 
+    chat: req.params.chatId,
+    isDeleted: { $ne: true } // Don't count deleted messages
+  });
+  
+  // Get messages with pagination (newest first)
+  const messages = await Message.find({ 
+    chat: req.params.chatId,
+    isDeleted: { $ne: true }
+  })
     .sort({ createdAt: -1 })
-    .limit(Number(limit));
+    .skip(skip)
+    .limit(parsedLimit)
+    .populate("sender", "name email profileImageURL")
+    .populate({
+      path: "attachments",
+      select: "filename originalname contentType size url createdAt"
+    })
+    .populate("reactions.user", "name email profileImageURL");
   
-  // Mark messages as read
-  const messageIds = messages.map(m => m._id);
-  await Message.updateMany(
-    {
-      _id: { $in: messageIds },
-      sender: { $ne: req.user._id },
-      "readBy.user": { $ne: req.user._id }
-    },
-    { 
-      $push: { 
-        readBy: { 
-          user: req.user._id,
-          readAt: new Date()
-        } 
-      } 
+  // Mark messages as read by this user
+  if (messages.length > 0 && isParticipant) {
+    const messageIds = messages.map(message => message._id);
+    
+    await Message.updateMany(
+      { 
+        _id: { $in: messageIds },
+        "readBy.user": { $ne: req.user._id }
+      },
+      { 
+        $addToSet: { 
+          readBy: { user: req.user._id, readAt: new Date() }
+        }
+      }
+    );
+  }
+  
+  // Return messages with pagination info
+  res.json({
+    messages,
+    pagination: {
+      page: parsedPage,
+      limit: parsedLimit,
+      totalMessages,
+      totalPages: Math.ceil(totalMessages / parsedLimit)
     }
-  );
-  
-  res.json(messages);
+  });
 });
 
 // @desc    Delete a message
@@ -464,7 +479,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
 });
 
 // @desc    Add reaction to a message
-// @route   POST /api/chats/:chatId/messages/:messageId/reactions
+// @route   POST /api/messages/:messageId/reactions
 // @access  Private
 const addReaction = asyncHandler(async (req, res) => {
   const { emoji } = req.body;
@@ -474,44 +489,94 @@ const addReaction = asyncHandler(async (req, res) => {
     throw new Error("Emoji is required");
   }
   
-  const message = await Message.findById(req.params.messageId);
+  // Get the message
+  const message = await Message.findById(req.params.messageId)
+    .populate({
+      path: "chat",
+      select: "participants type"
+    });
   
   if (!message) {
     res.status(404);
     throw new Error("Message not found");
   }
   
-  // Check if message belongs to the specified chat
-  if (message.chat.toString() !== req.params.chatId) {
-    res.status(400);
-    throw new Error("Message does not belong to this chat");
+  // Check if user is a participant or if it's a public chat
+  const isParticipant = message.chat.participants.includes(req.user._id);
+  const isPublicChat = message.chat.type === 'public';
+  
+  if (!isParticipant && !isPublicChat) {
+    res.status(403);
+    throw new Error("You are not a participant in this chat");
   }
   
-  // Check if user already reacted with this emoji
-  const existingReaction = message.reactions.find(
-    r => r.user.toString() === req.user._id.toString() && r.emoji === emoji
+  // Remove existing reaction from this user if any
+  await Message.updateOne(
+    { _id: message._id },
+    { $pull: { reactions: { user: req.user._id } } }
   );
   
-  if (existingReaction) {
-    // Remove reaction if it already exists (toggle)
-    message.reactions = message.reactions.filter(
-      r => !(r.user.toString() === req.user._id.toString() && r.emoji === emoji)
-    );
-  } else {
-    // Add new reaction
-    message.reactions.push({
-      emoji,
-      user: req.user._id
-    });
-  }
-  
-  await message.save();
-  
-  // Populate reactions
-  const updatedMessage = await Message.findById(message._id)
-    .populate("reactions.user", "name profileImageURL");
+  // Add the new reaction
+  const updatedMessage = await Message.findByIdAndUpdate(
+    message._id,
+    {
+      $push: {
+        reactions: {
+          user: req.user._id,
+          emoji
+        }
+      }
+    },
+    { new: true }
+  ).populate("reactions.user", "name email profileImageURL");
   
   res.json(updatedMessage.reactions);
+});
+
+// @desc    Delete reaction from a message
+// @route   DELETE /api/messages/:messageId/reactions/:reactionId
+// @access  Private
+const deleteReaction = asyncHandler(async (req, res) => {
+  // Get the message
+  const message = await Message.findById(req.params.messageId)
+    .populate({
+      path: "chat",
+      select: "participants type"
+    });
+  
+  if (!message) {
+    res.status(404);
+    throw new Error("Message not found");
+  }
+  
+  // Check if user is a participant or if it's a public chat
+  const isParticipant = message.chat.participants.includes(req.user._id);
+  const isPublicChat = message.chat.type === 'public';
+  
+  if (!isParticipant && !isPublicChat) {
+    res.status(403);
+    throw new Error("You are not a participant in this chat");
+  }
+  
+  // Find the reaction
+  const reaction = message.reactions.id(req.params.reactionId);
+  
+  if (!reaction) {
+    res.status(404);
+    throw new Error("Reaction not found");
+  }
+  
+  // Ensure user owns the reaction
+  if (reaction.user.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("You can only delete your own reactions");
+  }
+  
+  // Remove the reaction
+  message.reactions.pull(req.params.reactionId);
+  await message.save();
+  
+  res.json({ message: "Reaction removed" });
 });
 
 // Helper function to generate AI response using OpenRouter API
@@ -608,5 +673,6 @@ export {
   sendMessage,
   getMessages,
   deleteMessage,
-  addReaction
+  addReaction,
+  deleteReaction
 }; 

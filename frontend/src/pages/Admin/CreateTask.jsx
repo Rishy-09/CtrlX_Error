@@ -23,7 +23,7 @@ const CreateTask = () => {
     title: "",
     description: "",
     priority: "Low",
-    dueDate: null,
+    dueDate: "",
     assignedTo: [],
     todoChecklist: [],
     attachments: [],
@@ -49,72 +49,12 @@ const CreateTask = () => {
       title: "",
       description: "",
       priority: "Low",
-      dueDate: null,
+      dueDate: "",
       assignedTo: [],
       todoChecklist: [],
       attachments: [],
     });
     setCurrentTask(null);
-  };
-
-  // Create Task
-  const createTask = async () => {
-    setLoading(true);
-    try {
-      const todolist = taskData.todoChecklist?.map((item) => ({
-        text: item,
-        completed: false,
-      }));
-
-      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
-        ...taskData,
-        dueDate: new Date(taskData.dueDate).toISOString(),
-        todoChecklist: todolist,
-      });
-
-      toast.success("Task Created Successfully");
-      clearData();
-    } 
-    catch (error) {
-      console.error("Error creating task:", error);
-      setLoading(false);
-    } 
-    finally {
-      setLoading(false);
-    }
-  };
-
-  // Update Task
-  const updateTask = async () => {
-    setLoading(true);
-
-    try {
-      const todolist = taskData.todoChecklist?.map((item) => {
-        const prevTodoChecklist = currentTask?.todoChecklist || [];
-      
-        const matchedTask = prevTodoChecklist.find((task) => task?.text === item);
-      
-        return {
-          text: item,
-          completed: matchedTask?.completed || false,
-        };
-      });
-      const response = await axiosInstance.put(
-        API_PATHS.TASKS.UPDATE_TASK(taskId),
-        {
-          ...taskData,
-          dueDate: new Date(taskData.dueDate).toISOString(),
-          todoChecklist: todolist,
-        }
-    );
-    toast.success("Task Updated Successfully");
-    }catch (error) {
-      console.error("Error updating task:", error);
-      setLoading(false);
-    } 
-    finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -151,6 +91,66 @@ const CreateTask = () => {
     createTask();
   };
 
+  // Create Task
+  const createTask = async () => {
+    setLoading(true);
+    try {
+      const todolist = taskData.todoChecklist?.map((item) => ({
+        text: item,
+        completed: false,
+      }));
+
+      const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
+        ...taskData,
+        dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : "",
+        todoChecklist: todolist,
+      });
+
+      toast.success("Task Created Successfully");
+      clearData();
+    } 
+    catch (error) {
+      console.error("Error creating task:", error);
+      setLoading(false);
+    } 
+    finally {
+      setLoading(false);
+    }
+  };
+
+  // Update Task
+  const updateTask = async () => {
+    setLoading(true);
+
+    try {
+      const todolist = taskData.todoChecklist?.map((item) => {
+        const prevTodoChecklist = currentTask?.todoChecklist || [];
+      
+        const matchedTask = prevTodoChecklist.find((task) => task?.text === item);
+      
+        return {
+          text: item,
+          completed: matchedTask?.completed || false,
+        };
+      });
+      const response = await axiosInstance.put(
+        API_PATHS.TASKS.UPDATE_TASK(taskId),
+        {
+          ...taskData,
+          dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : "",
+          todoChecklist: todolist,
+        }
+    );
+    toast.success("Task Updated Successfully");
+    }catch (error) {
+      console.error("Error updating task:", error);
+      setLoading(false);
+    } 
+    finally {
+      setLoading(false);
+    }
+  };
+
   // get Task info by ID
   const getTaskDetailsById = async () => {
     try {
@@ -167,7 +167,7 @@ const CreateTask = () => {
           priority: taskInfo.priority,
           dueDate: taskInfo.dueDate
           ? moment(taskInfo.dueDate).format("YYYY-MM-DD") 
-          : null,
+          : "",
           assignedTo: taskInfo?.assignedTo?.map((item) => item._id) || [],
           todoChecklist: taskInfo?.todoChecklist?.map((item) => item?.text) || [],
           attachments: taskInfo?.attachments || [],
@@ -273,7 +273,7 @@ const CreateTask = () => {
                 </label>
 
                 <input 
-                  placeholder="Create App UI" 
+                  placeholder="Select Due Date" 
                   className='form-input'
                   value={taskData.dueDate || ""}
                   onChange={({target}) =>

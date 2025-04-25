@@ -10,7 +10,8 @@ import {
   sendMessage,
   getMessages,
   deleteMessage,
-  addReaction
+  addReaction,
+  deleteReaction
 } from "../controllers/chatController.js";
 import uploadMiddleware from "../middlewares/uploadMiddleware.js";
 
@@ -41,5 +42,6 @@ router.delete("/:chatId/messages/:messageId", deleteMessage);
 
 // Reactions
 router.post("/:chatId/messages/:messageId/reactions", addReaction);
+router.delete("/:chatId/messages/:messageId/reactions/:reactionId", deleteReaction);
 
 export default router; 

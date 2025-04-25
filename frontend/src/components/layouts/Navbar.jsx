@@ -69,6 +69,22 @@ const Navbar = () => {
     return `${getBasePath()}/settings`;
   };
   
+  // Get initials from user name
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Generate avatar URL for fallback
+  const getAvatarUrl = (name) => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
+  };
+  
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="container mx-auto px-4">
@@ -144,25 +160,36 @@ const Navbar = () => {
                   aria-expanded={showUserMenu}
                   aria-haspopup="true"
                 >
-                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
-                    <img
-                      src={user.profileImageURL || "https://via.placeholder.com/150?text=User"}
-                      alt="User"
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/150?text=User";
-                      }}
-                    />
+                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    {user.profileImageURL ? (
+                      <img
+                        src={user.profileImageURL}
+                        alt={user.name || "User"}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          // Replace with initials avatar
+                          e.target.style.display = 'none';
+                          e.target.parentNode.classList.add('flex', 'items-center', 'justify-center');
+                          const initialsSpan = document.createElement('span');
+                          initialsSpan.className = 'text-sm font-medium';
+                          initialsSpan.textContent = getInitials(user.name);
+                          e.target.parentNode.appendChild(initialsSpan);
+                        }}
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">{getInitials(user.name)}</span>
+                    )}
                   </div>
                 </button>
                 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                     <div className="py-1">
-                      <div className="px-4 py-2 border-b dark:border-gray-700">
+                      <div className="px-4 py-3 border-b dark:border-gray-700">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={user.email}>{user.email}</p>
                       </div>
                       <Link
                         to={getProfilePath()}

@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, restrictTo, authorizeRoles } from "../middlewares/authMiddleware.js";
+import { protect, restrictTo, authorizeRoles, adminOnly } from "../middlewares/authMiddleware.js";
 import { 
   getBugs, 
   getBugById, 
@@ -17,6 +17,10 @@ import {
   listBugFixes
 } from "../controllers/bugController.js";
 import uploadMiddleware from "../middlewares/uploadMiddleware.js";
+import multer from "multer";
+
+// Configure multer for memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -51,7 +55,7 @@ router.route("/:id")
 router.put("/:id/status", updateBugStatus);
 
 // Bug checklist management
-router.put("/:id/checklist", updateBugChecklist);
+router.put("/:id/todo", updateBugChecklist);
 
 // Bug assignment - restricted to admins and developers
 router.put("/:id/assign", restrictTo("admin", "developer"), assignBug);

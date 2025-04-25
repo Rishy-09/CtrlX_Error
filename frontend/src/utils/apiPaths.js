@@ -88,7 +88,7 @@ export const API_PATHS = {
         UPDATE_BUG: (bugId) => `/api/bugs/${bugId}`, // Update bug details
         DELETE_BUG: (bugId) => `/api/bugs/${bugId}`, // Delete a bug
         UPDATE_BUG_STATUS: (bugId) => `/api/bugs/${bugId}/status`, // Update bug status
-        UPDATE_BUG_CHECKLIST: (bugId) => `/api/bugs/${bugId}/checklist`, // Update bug checklist
+        UPDATE_BUG_CHECKLIST: (bugId) => `/api/bugs/${bugId}/todo`, // Update bug checklist
         ASSIGN_BUG: (bugId) => `/api/bugs/${bugId}/assign`, // Assign bug to users
         GET_BUG_ATTACHMENTS: (bugId) => `/api/bugs/${bugId}/attachments`, // Get bug attachments
     },
@@ -111,4 +111,108 @@ export const API_PATHS = {
         SEND_INVITE: "/api/email/send-invite",
         SUBSCRIBE_NEWSLETTER: "/api/email/subscribe"
     },
+};
+
+// API endpoints for direct use in services
+export const API_ENDPOINTS = {
+    AUTH: {
+        REGISTER: `${BASE_URL}${API_PATHS.AUTH.REGISTER}`,
+        LOGIN: `${BASE_URL}${API_PATHS.AUTH.LOGIN}`,
+        GET_PROFILE: `${BASE_URL}${API_PATHS.AUTH.GET_PROFILE}`,
+        UPDATE_PROFILE: `${BASE_URL}${API_PATHS.AUTH.UPDATE_PROFILE}`,
+        FORGOT_PASSWORD: `${BASE_URL}${API_PATHS.AUTH.FORGOT_PASSWORD}`,
+        RESET_PASSWORD: `${BASE_URL}${API_PATHS.AUTH.RESET_PASSWORD}`,
+        VERIFY_EMAIL: `${BASE_URL}${API_PATHS.AUTH.VERIFY_EMAIL}`,
+        RESEND_VERIFICATION: `${BASE_URL}${API_PATHS.AUTH.RESEND_VERIFICATION}`
+    },
+
+    USERS: {
+        GET_ALL_USERS: `${BASE_URL}${API_PATHS.USERS.GET_ALL_USERS}`,
+        GET_USER_BY_ID: `${BASE_URL}/api/users/:id`,
+        CREATE_USER: `${BASE_URL}${API_PATHS.USERS.CREATE_USER}`,
+        UPDATE_USER: `${BASE_URL}/api/users/:id`,
+        DELETE_USER: `${BASE_URL}/api/users/:id`
+    },
+
+    TASKS: {
+        GET_DASHBOARD_DATA: `${BASE_URL}${API_PATHS.TASKS.GET_DASHBOARD_DATA}`,
+        GET_USER_DASHBOARD_DATA: `${BASE_URL}${API_PATHS.TASKS.GET_USER_DASHBOARD_DATA}`,
+        GET_ALL_TASKS: `${BASE_URL}${API_PATHS.TASKS.GET_ALL_TASKS}`,
+        GET_TASK_BY_ID: `${BASE_URL}/api/tasks/:id`,
+        CREATE_TASK: `${BASE_URL}${API_PATHS.TASKS.CREATE_TASK}`,
+        UPDATE_TASK: `${BASE_URL}/api/tasks/:id`,
+        DELETE_TASK: `${BASE_URL}/api/tasks/:id`,
+        UPDATE_TASK_STATUS: `${BASE_URL}/api/tasks/:id/status`,
+        UPDATE_TODO_CHECKLIST: `${BASE_URL}/api/tasks/:id/todo`,
+        ADD_COMMENT: `${BASE_URL}/api/tasks/:id/comments`,
+        GET_COMMENTS: `${BASE_URL}/api/tasks/:id/comments`,
+        START_TIME_TRACKING: `${BASE_URL}/api/tasks/:id/time/start`,
+        STOP_TIME_TRACKING: `${BASE_URL}/api/tasks/:id/time/stop`,
+        GET_TIME_ENTRIES: `${BASE_URL}/api/tasks/:id/time`,
+        ADD_DEPENDENCY: `${BASE_URL}/api/tasks/:id/dependencies`,
+        REMOVE_DEPENDENCY: `${BASE_URL}/api/tasks/:id/dependencies/:dependencyId`,
+        GET_DEPENDENCIES: `${BASE_URL}/api/tasks/:id/dependencies`
+    },
+
+    REPORTS: {
+        EXPORT_TASKS: `${BASE_URL}${API_PATHS.REPORTS.EXPORT_TASKS}`,
+        EXPORT_USERS: `${BASE_URL}${API_PATHS.REPORTS.EXPORT_USERS}`
+    },
+
+    IMAGE: {
+        UPLOAD: `${BASE_URL}${API_PATHS.IMAGE.UPLOAD}`
+    },
+
+    REMINDERS: {
+        CREATE_REMINDER: `${BASE_URL}${API_PATHS.REMINDERS.CREATE_REMINDER}`,
+        GET_USER_REMINDERS: `${BASE_URL}${API_PATHS.REMINDERS.GET_USER_REMINDERS}`,
+        MARK_REMINDER_READ: `${BASE_URL}/api/reminders/:id/read`,
+        DELETE_REMINDER: `${BASE_URL}/api/reminders/:id`
+    },
+
+    CHATS: {
+        GET_ALL_CHATS: `${BASE_URL}${API_PATHS.CHATS.GET_ALL_CHATS}`,
+        GET_CHAT_BY_ID: `${BASE_URL}/api/chats/:id`,
+        CREATE_CHAT: `${BASE_URL}${API_PATHS.CHATS.CREATE_CHAT}`,
+        UPDATE_CHAT: `${BASE_URL}/api/chats/:id`,
+        DELETE_CHAT: `${BASE_URL}/api/chats/:id`,
+        UPDATE_PARTICIPANTS: `${BASE_URL}/api/chats/:id/participants`,
+        GET_MESSAGES: `${BASE_URL}/api/chats/:id/messages`,
+        SEND_MESSAGE: `${BASE_URL}/api/chats/:id/messages`,
+        DELETE_MESSAGE: `${BASE_URL}/api/chats/:id/messages/:messageId`,
+        ADD_REACTION: `${BASE_URL}/api/chats/:id/messages/:messageId/reactions`
+    },
+
+    BUGS: {
+        DASHBOARD_DATA: `${BASE_URL}${API_PATHS.BUGS.GET_DASHBOARD_DATA}`,
+        USER_DASHBOARD_DATA: `${BASE_URL}${API_PATHS.BUGS.GET_USER_DASHBOARD_DATA}`,
+        GET_ALL: `${BASE_URL}${API_PATHS.BUGS.GET_ALL_BUGS}`,
+        GET_BY_ID: `${BASE_URL}/api/bugs/:id`,
+        CREATE: `${BASE_URL}${API_PATHS.BUGS.CREATE_BUG}`,
+        UPDATE: `${BASE_URL}/api/bugs/:id`,
+        DELETE: `${BASE_URL}/api/bugs/:id`,
+        UPDATE_STATUS: `${BASE_URL}/api/bugs/:id/status`,
+        UPDATE_CHECKLIST: `${BASE_URL}/api/bugs/:id/todo`,
+        ASSIGN: `${BASE_URL}/api/bugs/:id/assign`,
+        GET_ATTACHMENTS: `${BASE_URL}/api/bugs/:id/attachments`
+    },
+
+    COMMENTS: {
+        ADD_COMMENT: `${BASE_URL}${API_PATHS.COMMENTS.ADD_COMMENT}`,
+        GET_COMMENTS: `${BASE_URL}/api/comments/:id`,
+        UPDATE_COMMENT: `${BASE_URL}/api/comments/:id`,
+        DELETE_COMMENT: `${BASE_URL}/api/comments/:id`,
+        GET_COMMENT_REPLIES: `${BASE_URL}/api/comments/:id/replies`
+    },
+
+    ATTACHMENTS: {
+        DOWNLOAD: `${BASE_URL}/api/attachments/download/:id`,
+        DELETE: `${BASE_URL}/api/attachments/:id`
+    },
+
+    EMAIL: {
+        SEND_NOTIFICATION: `${BASE_URL}${API_PATHS.EMAIL.SEND_NOTIFICATION}`,
+        SEND_INVITE: `${BASE_URL}${API_PATHS.EMAIL.SEND_INVITE}`,
+        SUBSCRIBE_NEWSLETTER: `${BASE_URL}${API_PATHS.EMAIL.SUBSCRIBE_NEWSLETTER}`
+    }
 };

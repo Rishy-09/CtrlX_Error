@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaUser } from 'react-icons/fa';
 
-// Default profile image to use when user doesn't have a profile picture
-const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/dykjpvgga/image/upload/v1674645487/a9ljktjl3o8f2fbwm2kt.jpg";
+// Helper function to generate avatar URL
+const getAvatarUrl = (name) => {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
+};
+
+// Helper function to get initials
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
 
 const UserAvatar = ({ 
   user, 
@@ -12,6 +25,8 @@ const UserAvatar = ({
   namePosition = 'right',
   onClick = null
 }) => {
+  const [imageError, setImageError] = useState(false);
+  
   if (!user) return null;
 
   // Size classes
@@ -23,20 +38,6 @@ const UserAvatar = ({
     xl: 'w-16 h-16 text-xl'
   };
 
-  // Get initials from user name
-  const getInitials = (name) => {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  // Use default image if user has no profile image
-  const profileImage = user.profileImageURL || DEFAULT_PROFILE_IMAGE;
-
   // Container classes for name positioning
   const containerClasses = showName ? `flex items-center ${namePosition === 'right' ? 'flex-row' : 'flex-col'}` : '';
   
@@ -46,27 +47,44 @@ const UserAvatar = ({
   // Avatar click handler
   const handleClick = onClick ? onClick : () => {};
 
+  // Determine what to render for avatar content
+  const renderAvatarContent = () => {
+    // If user has profile image and no error loading it
+    if (user.profileImageURL && !imageError) {
+      return (
+        <img 
+          src={user.profileImageURL} 
+          alt={user.name || 'User'} 
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      );
+    }
+    
+    // If user has a name, show initials
+    if (user.name) {
+      return (
+        <div className="w-full h-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-medium">
+          {getInitials(user.name)}
+        </div>
+      );
+    }
+    
+    // Fallback to generic user icon
+    return (
+      <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <FaUser />
+      </div>
+    );
+  };
+
   return (
     <div className={containerClasses}>
       <div 
-        className={`relative rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center ${sizeClasses[size]} ${className} ${onClick ? 'cursor-pointer' : ''}`}
+        className={`relative rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center ${sizeClasses[size]} ${className} ${onClick ? 'cursor-pointer' : ''}`}
         onClick={handleClick}
       >
-        {profileImage ? (
-          <img 
-            src={profileImage} 
-            alt={user.name || 'User'} 
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = DEFAULT_PROFILE_IMAGE;
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-            {user.name ? getInitials(user.name) : <FaUser />}
-          </div>
-        )}
+        {renderAvatarContent()}
       </div>
       
       {showName && user.name && (
