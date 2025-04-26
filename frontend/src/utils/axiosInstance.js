@@ -9,7 +9,7 @@ const publicRoutes = ['/login', '/signup', '/forgot-password', '/reset-password'
 
 const axiosInstance = axios.create({
     baseURL: BASE_URL,
-    timeout: 30000, // Increase timeout to 30 seconds
+    timeout: 60000, // Increase timeout to 60 seconds
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
