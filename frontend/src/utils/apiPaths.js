@@ -1,4 +1,4 @@
-export const BASE_URL = "https://ctrlx-error.onrender.com";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"; // Base URL for API requests
 
 // utils/apiPaths.js
 export const API_PATHS = {
