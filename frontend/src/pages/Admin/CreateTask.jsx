@@ -255,15 +255,15 @@ const CreateTask = () => {
 
             <div className='grid grid-cols-12 gap-4 mt-2'>
               <div className='col-span-6 md:col-span-4'>
-                <label className="">
+                <label className="text-xs font-medium text-slate-600">
                   Priority
                 </label>
 
                 <SelectDropdown
-                 options = {PRIORITY_DATA}
-                 value = {taskData.priority}
-                 onChange = {(value) => handleValueChange("priority", value)}
-                 placeholder = "Select Priority"
+                 options={PRIORITY_DATA}
+                 value={taskData.priority}
+                 onChange={(value) => handleValueChange("priority", value)}
+                 placeholder="Select Priority"
                 />
               </div>
 
@@ -283,7 +283,7 @@ const CreateTask = () => {
                 />
               </div>
 
-              <div className='col-span-12 md:col-span-3'>
+              <div className='col-span-12 md:col-span-4'>
                 <label className="text-xs font-medium text-slate-600">
                   Assign To
                 </label>

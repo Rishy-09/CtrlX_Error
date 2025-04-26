@@ -67,8 +67,28 @@ axiosInstance.interceptors.response.use(
             } else if (error.response.status === 500) {
                 toast.error('Server error. Please try again later.');
             } else if (error.response.status === 400) {
-                // Don't show toast for 400 errors as they will be handled by specific components
-                console.error('Bad request:', error.response.data?.message || 'Invalid request');
+                // Handle 400 errors more specifically by parsing the error data
+                const errorMessage = error.response.data?.message || 'Invalid request';
+                
+                // For validation errors, extract specific fields that failed
+                if (error.response.data?.errors && Array.isArray(error.response.data.errors)) {
+                    // Format validation errors into a readable message
+                    const formattedErrors = error.response.data.errors
+                        .map(err => `${err.field || ''}: ${err.message || 'Invalid value'}`)
+                        .join(', ');
+                    
+                    console.error('Bad request - Validation errors:', formattedErrors);
+                } else if (error.response.data?.invalidFields) {
+                    // Handle structured validation errors
+                    const fields = Object.keys(error.response.data.invalidFields);
+                    console.error('Bad request - Invalid fields:', fields.join(', '));
+                } else {
+                    // Generic error logging for 400s
+                    console.error('Bad request:', errorMessage);
+                }
+                
+                // Let component-level error handling take over rather than showing a toast
+                // This allows more specific UI feedback in forms
             } else if (error.response.status === 404) {
                 // If error message contains specific information about invalid chat ID format
                 if (error.response.data?.message && error.response.data.message.includes('Invalid ID format')) {

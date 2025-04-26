@@ -1,6 +1,6 @@
 import React, { useState, useContext, memo, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
-import { FaRobot, FaEllipsisV, FaTrashAlt, FaRegSmile, FaReply } from 'react-icons/fa';
+import { FaRobot, FaEllipsisV, FaTrashAlt, FaRegSmile, FaReply, FaUser } from 'react-icons/fa';
 import { useChat } from '../../../context/ChatContext';
 import { FiDownload, FiFile } from 'react-icons/fi';
 import { UserContext } from '../../../context/userContext';
@@ -161,6 +161,34 @@ const Reactions = memo(({ reactions, onAddReaction }) => {
   );
 });
 
+// User avatar component for messages
+const UserAvatar = memo(({ user, size = 8 }) => {
+  const isAI = user?.isAI || false;
+  
+  return (
+    <div className={`h-${size} w-${size} rounded-full overflow-hidden flex-shrink-0 mr-2 flex items-center justify-center ${isAI ? 'bg-purple-100' : 'bg-gray-100'}`}>
+      {user?.avatar ? (
+        <img 
+          src={user.avatar} 
+          alt={user.name || user.username || 'User'} 
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = null;
+            e.target.parentNode.innerHTML = isAI ? 
+              '<div class="text-purple-500"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 496 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 448c-110.3 0-200-89.7-200-200S137.7 56 248 56s200 89.7 200 200-89.7 200-200 200zm-80-216c17.7 0 32-14.3 32-32s-14.3-32-32-32-32 14.3-32 32 14.3 32 32 32zm160 0c17.7 0 32-14.3 32-32s-14.3-32-32-32-32 14.3-32 32 14.3 32 32 32zm4 72.6c-20.8 25-51.5 39.4-84 39.4s-63.2-14.3-84-39.4c-8.5-10.2-23.7-11.5-33.8-3.1-10.2 8.5-11.5 23.6-3.1 33.8 30 36 74.1 56.6 120.9 56.6s90.9-20.6 120.9-56.6c8.5-10.2 7.1-25.3-3.1-33.8-10.1-8.4-25.3-7.1-33.8 3.1z"></path></svg></div>' :
+              '<div class="text-gray-500"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 448 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"></path></svg></div>';
+          }}
+        />
+      ) : isAI ? (
+        <FaRobot className="text-purple-500" size={size * 2} />
+      ) : (
+        <FaUser className="text-gray-500" size={size * 2} />
+      )}
+    </div>
+  );
+});
+
 // Main MessageItem component with optimized rendering
 const MessageItem = memo(({ message, className = '' }) => {
   const { user } = useContext(UserContext);
@@ -170,6 +198,12 @@ const MessageItem = memo(({ message, className = '' }) => {
   const isCurrentUser = useMemo(() => {
     return message.sender?._id === user?._id;
   }, [message.sender?._id, user?._id]);
+
+  const isAI = useMemo(() => {
+    return message.sender?.isAI || 
+           (message.sender?.name && message.sender?.name.toLowerCase().includes('ai')) ||
+           message.isAIMessage;
+  }, [message.sender, message.isAIMessage]);
 
   // Cache the message ID to avoid lookups in multiple places
   const messageId = useMemo(() => message._id, [message._id]);
@@ -235,7 +269,7 @@ const MessageItem = memo(({ message, className = '' }) => {
         {attachmentsArray.map((attachment) => (
           <div 
             key={attachment._id || attachment.id || attachment.name}
-            className={`border rounded overflow-hidden ${isCurrentUser ? 'bg-blue-400' : 'bg-gray-100'}`}
+            className={`border rounded overflow-hidden ${isCurrentUser ? 'bg-blue-400' : isAI ? 'bg-purple-100' : 'bg-gray-100'}`}
             style={{ contain: 'content', willChange: 'auto' }}
           >
             <Attachment 
@@ -246,7 +280,7 @@ const MessageItem = memo(({ message, className = '' }) => {
         ))}
       </div>
     );
-  }, [attachmentsArray, isCurrentUser]);
+  }, [attachmentsArray, isCurrentUser, isAI]);
   
   // Memoize reactions rendering
   const reactionsContent = useMemo(() => {
@@ -296,27 +330,36 @@ const MessageItem = memo(({ message, className = '' }) => {
   // Memoize the entire message container to reduce re-renders
   return (
     <div 
-      className={`relative message-item group ${className}`}
+      className={`relative message-item group mb-4 ${className}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       style={{ contain: 'content', willChange: 'auto' }}
     >
       <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-[85%] relative ${isCurrentUser ? 'order-2' : 'order-1'}`}>
+        {/* Avatar for other users */}
+        {!isCurrentUser && (
+          <div className="flex-shrink-0 mr-2 self-end">
+            <UserAvatar user={message.sender} />
+          </div>
+        )}
+        
+        <div className={`max-w-[75%] relative ${isCurrentUser ? 'order-2' : 'order-1'}`}>
           {/* Message bubble */}
           <div 
             className={`rounded-lg p-3 ${
               isCurrentUser 
                 ? 'bg-blue-500 text-white' 
-                : 'bg-gray-200 text-gray-800'
+                : isAI
+                  ? 'bg-purple-50 border border-purple-200 text-gray-800'
+                  : 'bg-gray-200 text-gray-800'
             }`}
           >
-            {/* Sender name - only show if not current user */}
+            {/* Sender name - always show for non-current users */}
             {!isCurrentUser && (
-              <div className="font-semibold text-sm mb-1">
+              <div className={`font-semibold text-sm mb-1 ${isAI ? 'text-purple-600' : 'text-gray-700'}`}>
                 {message.sender?.username || message.sender?.name || 'Unknown User'}
-                {message.sender?.isAI && (
-                  <FaRobot className="inline-block ml-1 text-blue-500" />
+                {isAI && (
+                  <FaRobot className="inline-block ml-1 text-purple-500" />
                 )}
               </div>
             )}
@@ -342,6 +385,13 @@ const MessageItem = memo(({ message, className = '' }) => {
             {formattedTime}
           </div>
         </div>
+        
+        {/* User avatar for current user */}
+        {isCurrentUser && (
+          <div className="flex-shrink-0 ml-2 self-end">
+            <UserAvatar user={user} />
+          </div>
+        )}
         
         {/* Action buttons */}
         {actionButtons}

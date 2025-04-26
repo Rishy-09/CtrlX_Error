@@ -275,10 +275,13 @@ export const ChatProvider = ({ children }) => {
     }
   }, [activeChat, messagesLoading]);
 
-  // Send a message
-  const sendMessage = async (chatId, content, attachmentFiles = null) => {
-    // Prevent duplicate sends
-    if (sendingMessage) return null;
+  // Send a message to a chat
+  const sendMessage = async (chatId, content, attachmentFiles = null, senderOverride = null) => {
+    if (!chatId) {
+      console.error('No chat ID provided in sendMessage');
+      toast.error('Failed to send message: No chat selected');
+      return null;
+    }
     
     // Validate MongoDB ID format
     const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(chatId);
@@ -288,142 +291,126 @@ export const ChatProvider = ({ children }) => {
       return null;
     }
     
-    // Validate that there's either content or attachments
-    const trimmedContent = (content || '').trim();
-    
-    // Ensure attachments are valid File objects
-    let validAttachments = [];
-    if (attachmentFiles && Array.isArray(attachmentFiles) && attachmentFiles.length > 0) {
-      validAttachments = attachmentFiles.filter(file => file instanceof File);
-      
-      if (validAttachments.length !== attachmentFiles.length) {
-        console.error('Some attachments are not valid File objects:', 
-          attachmentFiles.filter(file => !(file instanceof File)));
-      }
-    }
-    
-    const hasAttachments = validAttachments.length > 0;
-    
-    if (!trimmedContent && !hasAttachments) {
-      toast.error('Message must have content or attachments');
-      return null;
-    }
-    
     setSendingMessage(true);
+    
+    // Create a temporary message ID outside the try block so it's available in catch
+    const tempMessageId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
     try {
-      const formData = new FormData();
+      // Create form data object to handle both text content and file attachments
+      let formData;
       
-      // Add content (may be empty if only attachments)
-      formData.append('content', trimmedContent);
-      
-      // Add attachments if provided
-      if (hasAttachments) {
-        // Debug the attachment files to ensure they are valid
-        console.log('Sending attachments:', validAttachments.length);
+      // Check if content is already FormData (direct pass from ChatInput)
+      if (content instanceof FormData) {
+        formData = content;
         
-        for (let i = 0; i < validAttachments.length; i++) {
-          const file = validAttachments[i];
-          
-          // Ensure it's a valid File object
-          if (file instanceof File) {
-            console.log(`Adding attachment ${i+1}/${validAttachments.length}:`, file.name, file.size, file.type);
-            formData.append('attachments', file);
+        // Add sender override if provided
+        if (senderOverride) {
+          formData.append('senderOverride', JSON.stringify(senderOverride));
+        }
+      } else {
+        formData = new FormData();
+        
+        // If content is an object (with text and files), extract them
+        if (typeof content === 'object' && content !== null && !(content instanceof File)) {
+          if (content.text) {
+            formData.append('content', content.text);
           }
+          
+          if (content.files && content.files.length > 0) {
+            for (let i = 0; i < content.files.length; i++) {
+              formData.append('attachments', content.files[i]);
+            }
+          }
+        } else {
+          // Otherwise, assume content is a string
+          formData.append('content', typeof content === 'string' ? content : JSON.stringify(content));
+        }
+        
+        // Add attachment files if they exist
+        if (attachmentFiles) {
+          if (Array.isArray(attachmentFiles)) {
+            for (let i = 0; i < attachmentFiles.length; i++) {
+              formData.append('attachments', attachmentFiles[i]);
+            }
+          } else {
+            formData.append('attachments', attachmentFiles);
+          }
+        }
+        
+        // Add sender override if provided
+        if (senderOverride) {
+          formData.append('senderOverride', JSON.stringify(senderOverride));
         }
       }
       
-      // For debugging - log FormData contents
-      console.log('FormData created with content and attachments');
-      // Verify formData contents
-      let formDataEntries = [];
-      for (const pair of formData.entries()) {
-        const entryInfo = pair[0] === 'attachments' 
-          ? `${pair[0]}: File (${pair[1].name}, ${pair[1].size} bytes)` 
-          : `${pair[0]}: ${pair[1]}`;
-        formDataEntries.push(entryInfo);
-        console.log(entryInfo);
-      }
-      
-      if (formDataEntries.length === 1 && formDataEntries[0].startsWith('content:') && !trimmedContent) {
-        console.error('FormData only contains empty content and no attachments');
-        toast.error('Message must have content or attachments');
-        return null;
-      }
-      
-      // Create a unique temporary ID for the message
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      
-      // Create a temporary message to display while the actual message is being sent
+      // Create a temporary message (removed duplicate declaration)
       const tempMessage = {
-        _id: tempId,
-        content: trimmedContent,
+        _id: tempMessageId,
+        content: formData.get('content') || '',
+        sender: senderOverride || user,
         createdAt: new Date().toISOString(),
-        sender: user,
+        chatId,
         isTemporary: true,
-        attachments: hasAttachments ? validAttachments.map(file => ({
-          _id: `temp-attach-${Math.random().toString(36).substring(2, 9)}`,
+        tempId: tempMessageId,
+        // If there are files in the FormData, create temporary attachments
+        attachments: formData.getAll('attachments').map(file => ({
+          _id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           name: file.name,
           originalFilename: file.name,
           size: file.size,
           type: file.type,
-          mimeType: file.type,
-          // Create a local preview URL for image files
-          previewUrl: file.type?.startsWith('image/') ? URL.createObjectURL(file) : null,
           isTemporary: true
-        })) : []
+        }))
       };
       
-      // Only add temp message to UI if we have valid content/attachments
-      if (trimmedContent || hasAttachments) {
-        // Add the temporary message to the UI immediately
+      // Only add the temp message if we actually have content or attachments
+      if (tempMessage.content || (tempMessage.attachments && tempMessage.attachments.length > 0)) {
+        // Add to messages with proper immutability pattern
         setMessages(prevMessages => [...prevMessages, tempMessage]);
+        
+        // Update UI immediately without waiting for API
+        if (activeChat && activeChat._id === chatId) {
+          // Also update the chat's last message in the list
+          setChats(prevChats => 
+            prevChats.map(chat => 
+              chat._id === chatId 
+                ? { 
+                    ...chat, 
+                    lastMessage: { 
+                      content: tempMessage.content, 
+                      createdAt: tempMessage.createdAt,
+                      sender: tempMessage.sender 
+                    } 
+                  } 
+                : chat
+            )
+          );
+        }
       }
       
-      console.log('Sending message to API...');
-      
-      // Send the actual message to the server
+      // Send the real message to the API
       const response = await axiosInstance.post(`/api/chats/${chatId}/messages`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
-      console.log('Message sent successfully:', response.data);
-      
-      // Replace the temporary message with the real one from the server
-      setMessages(prevMessages => {
-        const updatedMessages = prevMessages.filter(msg => msg._id !== tempId);
-        return [...updatedMessages, response.data];
-      });
-      
-      // Clean up any temporary object URLs
-      if (hasAttachments) {
-        tempMessage.attachments.forEach(attachment => {
-          if (attachment.previewUrl) {
-            URL.revokeObjectURL(attachment.previewUrl);
-          }
-        });
+      // If we get a successful response, replace the temporary message with the real one
+      if (response.data) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg._id === tempMessageId ? response.data : msg
+          )
+        );
+        
+        // Refresh chat list to update last message
+        fetchChats();
+        
+        return response.data;
       }
-      
-      // If the chat has AI assistant, inform the user it's thinking
-      if (activeChat?.aiAssistant?.enabled) {
-        toast.success('Message sent. AI is thinking...', {
-          duration: 3000,
-          id: 'ai-thinking-toast'
-        });
-      }
-      
-      // Update unread count if needed
-      if (activeChat && activeChat._id === chatId) {
-        fetchChats(); // Update chat list to refresh unread counts
-      }
-      
-      return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Remove the temporary message on error
-      setMessages(prevMessages => prevMessages.filter(msg => !msg.isTemporary));
       
       // Handle specific error types
       if (error.response) {
@@ -431,46 +418,19 @@ export const ChatProvider = ({ children }) => {
           toast.error('Chat not found or has been deleted');
         } else if (error.response.status === 403) {
           toast.error('You do not have permission to send messages in this chat');
-        } else if (error.response.status === 413) {
-          toast.error('File(s) too large. Maximum file size is 10MB');
-        } else if (error.response.status === 400) {
-          // Try to parse the error message from HTML response if needed
-          let errorMsg = 'Invalid message format. Please try again.';
-          
-          if (error.response.data) {
-            if (typeof error.response.data === 'string' && error.response.data.includes('Error:')) {
-              // Extract error message from HTML
-              const match = error.response.data.match(/Error: ([^<]+)/);
-              if (match && match[1]) {
-                errorMsg = match[1].trim();
-              }
-            } else if (error.response.data.message) {
-              errorMsg = error.response.data.message;
-            }
-          }
-          
-          toast.error(errorMsg);
-          console.error('Server validation error:', error.response.data);
         } else {
-          toast.error('Failed to send message. Please try again.');
+          toast.error('Failed to send message');
         }
-        
-        // Add specific handling for AI errors
-        if (error.response.data && typeof error.response.data === 'string') {
-          if (error.response.data.includes('Error generating AI response') || 
-              error.response.data.includes('status code 401')) {
-            console.warn('AI response generation failed:', error.response.data);
-            toast.error('Your message was sent, but the AI response could not be generated.', { 
-              duration: 5000,
-              id: 'ai-error-toast'
-            });
-            // Still consider this a success since the user's message was sent
-            return true;
-          }
-        }
+      } else if (error.request) {
+        toast.error('Network error. Please check your connection');
       } else {
-        toast.error('Network error. Please check your connection.');
+        toast.error('Error sending message');
       }
+      
+      // Remove the temporary message on error
+      setMessages(prevMessages => 
+        prevMessages.filter(msg => msg._id !== tempMessageId)
+      );
       
       return null;
     } finally {
@@ -478,10 +438,30 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  // Function to simulate AI or other user messages for testing
+  const simulateMessage = async (chatId, content, senderType = 'ai') => {
+    if (!chatId) return null;
+    
+    const sender = senderType === 'ai' 
+      ? {
+          _id: 'ai-assistant',
+          name: 'AI Assistant',
+          username: 'ai-assistant',
+          isAI: true
+        }
+      : {
+          _id: `other-user-${Date.now()}`,
+          name: 'Other User',
+          username: 'other-user'
+        };
+        
+    return await sendMessage(chatId, content, null, sender);
+  };
+
   // Delete a message
-  const deleteMessage = async (chatId, messageId) => {
+  const deleteMessage = async (messageId) => {
     try {
-      await axiosInstance.delete(`/api/chats/${chatId}/messages/${messageId}`);
+      await axiosInstance.delete(`/api/chats/${messageId}`);
       
       // Update in messages list
       setMessages(prevMessages => 
@@ -575,6 +555,7 @@ export const ChatProvider = ({ children }) => {
     deleteChat,
     fetchMessages,
     sendMessage,
+    simulateMessage,
     deleteMessage,
     addReaction,
     setActiveChat,
@@ -594,6 +575,7 @@ export const ChatProvider = ({ children }) => {
     deleteChat,
     fetchMessages,
     sendMessage,
+    simulateMessage,
     deleteMessage,
     addReaction,
     setActiveChat,

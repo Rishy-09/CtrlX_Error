@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, memo, useCallback, useMemo } from 'react';
 import { FiSend, FiPaperclip, FiX, FiSmile } from 'react-icons/fi';
+import { FaRobot, FaUser } from 'react-icons/fa';
 import TextareaAutosize from 'react-textarea-autosize';
 import Picker from 'emoji-picker-react';
 import { toast } from 'react-hot-toast';
+import { useChat } from '../../../context/ChatContext';
 
 // Move the AttachmentPreview component outside of ChatInput
 // This prevents it from being recreated on each render
@@ -36,21 +38,27 @@ const AttachmentPreview = memo(({ attachment, onRemove, isSending }) => (
 ));
 
 // Use memo to prevent unnecessary re-renders with custom comparison
-const ChatInput = memo(({ onSendMessage, disabled }) => {
+const ChatInput = memo(({ onSendMessage, disabled, chatId }) => {
+  const { simulateMessage } = useChat();
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showSimulateButtons, setShowSimulateButtons] = useState(false);
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const textareaRef = useRef(null);
+  const simulateButtonsRef = useRef(null);
   const previousRenderRef = useRef({ disabled, isSending });
   
   // Close emoji picker when clicking outside - use useCallback
   const handleClickOutside = useCallback((event) => {
     if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
       setShowEmojiPicker(false);
+    }
+    if (simulateButtonsRef.current && !simulateButtonsRef.current.contains(event.target)) {
+      setShowSimulateButtons(false);
     }
   }, []);
 
@@ -179,6 +187,7 @@ const ChatInput = memo(({ onSendMessage, disabled }) => {
       if (attachments.length > 0 && validFiles.length === 0) {
         console.error('No valid file attachments found');
         toast.error('Invalid attachments. Please try again.');
+        setIsSending(false);
         return;
       }
       
@@ -194,161 +203,238 @@ const ChatInput = memo(({ onSendMessage, disabled }) => {
       // Call the onSendMessage function from the parent component
       await onSendMessage(messageData);
       
-      // Reset input state
+      // Reset input state only on success
       setMessage('');
       setAttachments([]);
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      
+      // More specific error messages based on the error type
+      if (error.response && error.response.status === 400) {
+        if (error.response.data && error.response.data.message) {
+          toast.error(`Failed to send: ${error.response.data.message}`);
+        } else {
+          toast.error('Invalid message format. Please check your input.');
+        }
+      } else if (error.response && error.response.status === 413) {
+        toast.error('File size too large. Maximum total size is 15MB.');
+      } else {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setIsSending(false);
     }
   }, [message, attachments, isUploading, disabled, isSending, onSendMessage]);
 
-  const handleKeyDown = useCallback((e) => {
+  // Handle simulating messages
+  const handleSimulateMessage = useCallback(async (type) => {
+    if (!message.trim() || !chatId) return;
+    
+    try {
+      setIsSending(true);
+      
+      // Simulate message based on type
+      await simulateMessage(chatId, message.trim(), type);
+      
+      // Reset input state
+      setMessage('');
+      setShowSimulateButtons(false);
+    } catch (error) {
+      console.error('Error simulating message:', error);
+      toast.error('Failed to simulate message');
+    } finally {
+      setIsSending(false);
+    }
+  }, [message, chatId, simulateMessage]);
+
+  // Handle submitting the form
+  const handleFormSubmit = useCallback((e) => {
+    e.preventDefault();
+    sendFormattedMessage();
+  }, [sendFormattedMessage]);
+
+  // Handle message change
+  const handleMessageChange = useCallback((e) => {
+    setMessage(e.target.value);
+  }, []);
+
+  // Handle emoji selection
+  const handleEmojiSelect = useCallback((emojiData) => {
+    setMessage(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    
+    // Focus the textarea after adding an emoji
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
+
+  // File input trigger
+  const triggerFileInput = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  // Toggle emoji picker
+  const toggleEmojiPicker = useCallback(() => {
+    setShowEmojiPicker(prev => !prev);
+  }, []);
+
+  // Toggle simulate buttons
+  const toggleSimulateButtons = useCallback(() => {
+    setShowSimulateButtons(prev => !prev);
+  }, []);
+
+  // Key press handler
+  const handleKeyPress = useCallback((e) => {
+    // Send message on Enter (but not with Shift+Enter)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendFormattedMessage();
     }
   }, [sendFormattedMessage]);
-
-  const handleSendMessage = useCallback(() => {
-    sendFormattedMessage();
-  }, [sendFormattedMessage]);
-
-  const handleAttachmentClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleEmojiClick = useCallback((emojiData) => {
-    const emoji = emojiData.emoji;
-    
-    setMessage(prevMessage => {
-      const cursorPosition = textareaRef.current?.selectionStart || prevMessage.length;
-      return prevMessage.substring(0, cursorPosition) + 
-             emoji + 
-             prevMessage.substring(cursorPosition);
-    });
-    
-    // Wait for state update before focusing
-    setTimeout(() => {
-      if (textareaRef.current) {
-        const cursorPosition = textareaRef.current.selectionStart || 0;
-        const newPosition = cursorPosition + emoji.length;
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(newPosition, newPosition);
-      }
-      setShowEmojiPicker(false);
-    }, 0);
-  }, []);
-
-  const handleMessageChange = useCallback((e) => {
-    setMessage(e.target.value);
-  }, []);
-
-  // Memoize button disabled state
-  const isButtonDisabled = useMemo(() => {
-    return (!message.trim() && attachments.length === 0) || isUploading || disabled || isSending;
-  }, [message, attachments.length, isUploading, disabled, isSending]);
   
-  // Replace the inner definition with a stable renderAttachmentsContainer
-  const renderAttachmentsContainer = useMemo(() => {
-    return attachments.length > 0 ? (
-      <div className="flex flex-wrap gap-2 mb-2" style={{ contain: 'content', willChange: 'auto' }}>
-        {attachments.map(attachment => (
-          <AttachmentPreview 
-            key={attachment.id}
-            attachment={attachment}
-            onRemove={removeAttachment}
-            isSending={isSending}
-          />
-        ))}
-      </div>
-    ) : null;
-  }, [attachments, isSending, removeAttachment]);
-
   return (
-    <div className="border-t border-gray-200 p-4 bg-white">
+    <div className="border-t border-gray-200 bg-white pt-2 pb-3 px-4">
       {/* Attachment previews */}
-      {renderAttachmentsContainer}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {attachments.map(attachment => (
+            <AttachmentPreview
+              key={attachment.id}
+              attachment={attachment}
+              onRemove={removeAttachment}
+              isSending={isSending}
+            />
+          ))}
+        </div>
+      )}
       
-      <div className="flex items-end">
-        {/* File input (hidden) */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          multiple
-          className="hidden"
-          accept="image/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          disabled={disabled || isSending || (attachments.length >= 5)}
-        />
-
-        {/* Attachment button */}
-        <button
-          onClick={handleAttachmentClick}
-          className="text-gray-500 hover:text-blue-500 p-2"
-          disabled={disabled || isSending || (attachments.length >= 5)}
-          type="button"
-          aria-label="Add attachment"
-        >
-          <FiPaperclip size={20} />
-        </button>
-
-        {/* Emoji picker button and dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowEmojiPicker(prev => !prev)}
-            className="text-gray-500 hover:text-yellow-500 p-2"
+      {/* Message input form */}
+      <form onSubmit={handleFormSubmit} className="relative">
+        <div className="flex items-end border rounded-lg overflow-hidden relative">
+          {/* Textarea for message */}
+          <TextareaAutosize
+            ref={textareaRef}
+            value={message}
+            onChange={handleMessageChange}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            className="flex-grow py-2 px-3 focus:outline-none resize-none max-h-32"
             disabled={disabled || isSending}
-            type="button"
-            aria-label="Add emoji"
-          >
-            <FiSmile size={20} />
-          </button>
+            maxRows={6}
+          />
+          
+          {/* Input actions */}
+          <div className="flex items-center space-x-1 px-2">
+            {/* Emoji picker button */}
+            <button
+              type="button"
+              onClick={toggleEmojiPicker}
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full"
+              disabled={disabled || isSending}
+              aria-label="Add emoji"
+            >
+              <FiSmile size={20} />
+            </button>
+            
+            {/* File attachment button */}
+            <button
+              type="button"
+              onClick={triggerFileInput}
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full"
+              disabled={disabled || isSending || attachments.length >= 5}
+              aria-label="Attach file"
+            >
+              <FiPaperclip size={20} />
+            </button>
+            
+            {/* Simulate message button */}
+            <button
+              type="button"
+              onClick={toggleSimulateButtons}
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full"
+              disabled={disabled || isSending}
+              aria-label="Simulate messages"
+            >
+              <FaRobot size={20} className={showSimulateButtons ? "text-purple-500" : ""} />
+            </button>
+            
+            {/* Send button */}
+            <button
+              type="submit"
+              className={`p-2 rounded-full ${
+                (!message.trim() && attachments.length === 0) || disabled || isSending
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-blue-500 hover:text-blue-700'
+              }`}
+              disabled={(!message.trim() && attachments.length === 0) || disabled || isSending}
+              aria-label="Send message"
+            >
+              <FiSend size={20} />
+            </button>
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/zip"
+            disabled={disabled || isSending || attachments.length >= 5}
+          />
+          
+          {/* Emoji picker popup */}
           {showEmojiPicker && (
             <div 
-              className="absolute bottom-12 left-0 z-10" 
               ref={emojiPickerRef}
+              className="absolute right-12 bottom-14 z-10"
             >
-              <Picker onEmojiClick={handleEmojiClick} />
+              <Picker onEmojiClick={handleEmojiSelect} />
+            </div>
+          )}
+          
+          {/* Simulate buttons popup */}
+          {showSimulateButtons && (
+            <div 
+              ref={simulateButtonsRef}
+              className="absolute right-14 bottom-14 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-10"
+            >
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSimulateMessage('ai')}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-purple-100 text-purple-700"
+                  disabled={!message.trim() || disabled || isSending}
+                >
+                  <FaRobot size={16} />
+                  <span>Simulate AI Message</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateMessage('user')}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-100 text-blue-700"
+                  disabled={!message.trim() || disabled || isSending}
+                >
+                  <FaUser size={16} />
+                  <span>Simulate Other User</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Message input */}
-        <TextareaAutosize
-          ref={textareaRef}
-          value={message}
-          onChange={handleMessageChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          disabled={disabled || isSending}
-          className="flex-grow bg-gray-100 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none min-h-10 max-h-32"
-          maxRows={5}
-        />
-
-        {/* Send button */}
-        <button
-          onClick={handleSendMessage}
-          disabled={isButtonDisabled}
-          className={`ml-2 p-2 rounded-full ${
-            isButtonDisabled
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
-          }`}
-          type="button"
-          aria-label="Send message"
-        >
-          <FiSend size={20} />
-        </button>
-      </div>
+      </form>
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Optimize re-renders based on both disabled state and onSendMessage function
-  return prevProps.disabled === nextProps.disabled && 
-         prevProps.onSendMessage === nextProps.onSendMessage;
+  // Optimize re-renders by comparing only the props we care about
+  return (
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.onSendMessage === nextProps.onSendMessage
+  );
 });
 
 export default ChatInput; 
