@@ -69,6 +69,27 @@ axiosInstance.interceptors.response.use(
             } else if (error.response.status === 400) {
                 // Don't show toast for 400 errors as they will be handled by specific components
                 console.error('Bad request:', error.response.data?.message || 'Invalid request');
+            } else if (error.response.status === 404) {
+                // If error message contains specific information about invalid chat ID format
+                if (error.response.data?.message && error.response.data.message.includes('Invalid ID format')) {
+                    console.error('Resource not found - Invalid ID format:', error.response.config?.url);
+                    toast.error('Invalid ID format. Please navigate to a valid item.');
+                    
+                    // Handle redirection for chat pages with invalid IDs
+                    const currentPath = window.location.pathname;
+                    if (currentPath.includes('/chat/')) {
+                        // Detect whether it's user or admin chat
+                        setTimeout(() => {
+                            if (currentPath.includes('/admin/chat/')) {
+                                window.location.href = '/admin/chat';
+                            } else {
+                                window.location.href = '/user/chat';
+                            }
+                        }, 1500);
+                    }
+                } else {
+                    console.error('Resource not found:', error.response.config?.url);
+                }
             }
         } 
         else if (error.code === 'ECONNABORTED') {

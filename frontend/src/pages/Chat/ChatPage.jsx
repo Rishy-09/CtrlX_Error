@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../../context/ChatContext';
 import { UserContext } from '../../context/userContext';
@@ -11,6 +11,45 @@ import MessageItem from './components/MessageItem';
 import CreateChatModal from './components/CreateChatModal';
 import ChatSettingsModal from './components/ChatSettingsModal';
 import ChatInput from './components/ChatInput';
+import ChatMessages from './components/ChatMessages';
+import { isValidMongoId } from '../../utils/routeValidators';
+
+// Create stable empty state components to prevent re-renders
+const EmptyStateScreen = React.memo(({ onCreateChat }) => (
+  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+    <div className="text-xl mb-2">Select a chat or create a new one</div>
+    <button
+      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+      onClick={onCreateChat}
+    >
+      Create New Chat
+    </button>
+  </div>
+));
+
+// Component for "No chat selected" state
+const NoChatSelectedScreen = React.memo(({ onCreateChat }) => (
+  <div className="flex-grow flex flex-col justify-center items-center text-center p-4">
+    <div className="text-xl mb-2">No chat selected</div>
+    <p className="text-gray-500 mb-4">Select a chat from the sidebar or create a new one.</p>
+    <button
+      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+      onClick={onCreateChat}
+    >
+      Create New Chat
+    </button>
+  </div>
+));
+
+// Loading component
+const LoadingScreen = React.memo(() => (
+  <div className="flex-grow flex justify-center items-center">
+    <div className="text-center">
+      <div className="spinner mb-2"></div>
+      <p>Loading chat...</p>
+    </div>
+  </div>
+));
 
 const ChatPage = () => {
   const { chatId } = useParams();
@@ -33,159 +72,357 @@ const ChatPage = () => {
   
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  
+  // Ensure refs are created at component initialization and persist between renders
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   
-  // Fetch active chat when chatId changes
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [pollingIntervalId, setPollingIntervalId] = useState(null);
+  const [chatNotFound, setChatNotFound] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
+  const MAX_ERRORS = 3;
+  const [newMessageReceived, setNewMessageReceived] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimeout = useRef(null);
+  
+  // Add a state to track chats we've already attempted to load messages for
+  // This will prevent continuous loading attempts for empty chats
+  const [loadedChatIds, setLoadedChatIds] = useState(new Set());
+  
+  // Quick validation to prevent any operations with invalid IDs
+  const isValidChatId = !chatId || isValidMongoId(chatId);
+  
+  // Clear interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+      }
+    };
+  }, [pollingIntervalId]);
+  
+  // Optimize the chat loading and transition flow
   useEffect(() => {
     let isActive = true; // For cleanup/cancellation
+    let transitionTimeout = null;
     
     const loadChat = async () => {
       if (chatId) {
+        // Check if we've already loaded this chat's messages, regardless of count
+        const chatAlreadyLoaded = activeChat && 
+                                  activeChat._id === chatId && 
+                                  (messages.length > 0 || loadedChatIds.has(chatId)) && 
+                                  !messagesLoading;
+        
+        // Skip loading if we already have this chat active with messages or previously loaded
+        if (chatAlreadyLoaded) {
+          console.log('Chat already loaded or attempted to load, skipping fetch:', chatId);
+          return;
+        }
+        
+        // Additional validation before proceeding
+        if (!isValidChatId) {
+          console.error('Invalid MongoDB ID format in loadChat:', chatId);
+          const basePath = user?.role === 'admin' ? '/admin/chat' : '/user/chat';
+          navigate(basePath, { replace: true });
+          toast.error('Invalid chat ID format');
+          return;
+        }
+        
+        // Clear existing polling interval if there is one
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          setPollingIntervalId(null);
+        }
+        
+        // Reset states
+        setChatNotFound(false);
+        setErrorCount(0);
+        
         try {
-          const chat = await fetchChatById(chatId);
-          // Only update state if component is still mounted
-          if (isActive && !chat) {
-            toast.error('Chat not found or you do not have access');
-            // Navigate to the correct path based on user role
-            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
-            navigate(basePath);
+          // IMPORTANT: Don't clear the active chat or set loading immediately
+          // Instead, keep the current chat visible during the transition
+          
+          // Only fetch chat if it's different from current active chat
+          let chat = activeChat;
+          if (!activeChat || activeChat._id !== chatId) {
+            // First fetch the chat data without showing loading indicators
+            chat = await fetchChatById(chatId);
+          }
+          
+          // Only update state if component is still mounted AND we got a valid chat
+          if (isActive) {
+            if (!chat) {
+              const basePath = user?.role === 'admin' ? '/admin/chat' : '/user/chat';
+              navigate(basePath);
+              setChatNotFound(true);
+              return;
+            }
+            
+            // Use a small delay before applying the chat change
+            // This prevents flickering by ensuring all data is ready before transition
+            clearTimeout(transitionTimeout);
+            transitionTimeout = setTimeout(() => {
+              if (isActive) {
+                // Set the active chat first, then fetch messages in this order
+                if (!activeChat || activeChat._id !== chatId) {
+                  setActiveChat(chat);
+                }
+                
+                // Only fetch messages if we haven't loaded this chat before
+                if (!loadedChatIds.has(chatId)) {
+                  // Now fetch messages for this chat (after active chat is set)
+                  fetchMessages(chatId)
+                    .then(() => {
+                      // Mark this chat as loaded regardless of message count
+                      setLoadedChatIds(prev => new Set([...prev, chatId]));
+                    })
+                    .catch(msgError => {
+                      console.error('Error loading chat messages:', msgError);
+                      // Still mark as loaded to prevent continuous attempts
+                      setLoadedChatIds(prev => new Set([...prev, chatId]));
+                      if (msgError.response && msgError.response.status === 404) {
+                        setChatNotFound(true);
+                      }
+                    });
+                }
+                
+                setHasScrolledToBottom(false);
+              }
+            }, 50); // Small delay to batch the state updates
           }
         } catch (error) {
           console.error('Error loading chat:', error);
           if (isActive) {
-            toast.error('Failed to load chat');
-            // Navigate to the correct path based on user role
-            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+            const basePath = user?.role === 'admin' ? '/admin/chat' : '/user/chat';
             navigate(basePath);
           }
         }
       } else if (isActive) {
+        // Only clear active chat if no chatId provided
         clearActiveChat();
+        
+        // Clear polling interval
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          setPollingIntervalId(null);
+        }
       }
     };
     
-    loadChat();
+    // Only proceed if the chatId is valid
+    if (isValidChatId) {
+      loadChat();
+    }
     
     // Cleanup function
     return () => {
       isActive = false;
-    };
-  }, [chatId, fetchChatById, navigate, clearActiveChat, user.role]);
-  
-  // Fetch messages when active chat changes
-  useEffect(() => {
-    if (activeChat) {
-      fetchMessages(activeChat._id);
-      setHasScrolledToBottom(false);
-    }
-  }, [activeChat, fetchMessages]);
-  
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current && !hasScrolledToBottom) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      setHasScrolledToBottom(true);
-    }
-  }, [messages, hasScrolledToBottom]);
-  
-  // Auto-scroll when new messages arrive
-  useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current && hasScrolledToBottom) {
-      const isScrolledToBottom = messagesContainerRef.current && 
-        (messagesContainerRef.current.scrollHeight - messagesContainerRef.current.scrollTop - messagesContainerRef.current.clientHeight < 100);
+      clearTimeout(transitionTimeout);
       
-      if (isScrolledToBottom || sendingMessage) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      // Clear any polling interval
+      if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+        setPollingIntervalId(null);
       }
+    };
+  }, [chatId, fetchChatById, fetchMessages, navigate, clearActiveChat, user?.role, 
+      pollingIntervalId, isValidChatId, activeChat, messages.length, messagesLoading, loadedChatIds]);
+  
+  // Scroll to bottom when messages change 
+  useEffect(() => {
+    // Only handle this if we have messages and aren't loading more
+    if (!hasScrolledToBottom && messagesContainerRef.current && messages.length > 0 && !messagesLoading) {
+      // Use requestAnimationFrame instead of setTimeout for better performance
+      requestAnimationFrame(() => {
+        const scrollContainer = messagesContainerRef.current;
+        if (scrollContainer) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          setHasScrolledToBottom(true);
+        }
+      });
     }
-  }, [messages, sendingMessage, hasScrolledToBottom]);
+  }, [messages, hasScrolledToBottom, messagesLoading]);
   
   // Check for new messages and AI responses periodically
   useEffect(() => {
-    if (activeChat && activeChat._id) {
-      // Initial fetch only if we don't have messages already
-      if (messages.length === 0) {
-        fetchMessages(activeChat._id);
-      }
-      
-      // Set up polling for new messages - especially important for AI responses
-      const interval = setInterval(() => {
-        // Only fetch if AI is enabled and we're not already loading messages
-        if (activeChat.aiAssistant?.enabled && !messagesLoading && !sendingMessage) {
-          // Keep track of last message ID to avoid duplicate UI updates
-          const lastMessageId = messages.length > 0 ? messages[messages.length - 1]._id : null;
-          fetchMessages(activeChat._id)
-            .then(newMessages => {
-              // Check if we received new messages to avoid false UI updates
-              if (newMessages && newMessages.length > 0 && 
-                  lastMessageId !== newMessages[newMessages.length - 1]._id) {
-                // Only show notification if there's a new AI message
-                const hasNewAIMessage = newMessages.some(msg => 
-                  (msg.isAIMessage || msg.sender.isAI) && 
-                  !messages.some(existingMsg => existingMsg._id === msg._id)
-                );
-                
-                if (hasNewAIMessage) {
-                  // Silent UI update without toast notification
-                  // as the messages will appear in the chat
-                }
-              }
-            });
-        }
-      }, 5000); // Poll every 5 seconds - only if AI is enabled
-      
-      return () => clearInterval(interval);
+    if (!activeChat || chatNotFound || messagesLoading || sendingMessage) {
+      return; // Don't poll if chat is not active, not found, or messages are loading/sending
     }
-  }, [activeChat, fetchMessages, messages, messagesLoading, sendingMessage]);
+
+    // Clear any existing polling interval
+    if (pollingIntervalId) {
+      clearInterval(pollingIntervalId);
+    }
+
+    // Local error counter to avoid unnecessary state updates
+    let localErrorCount = 0;
+    
+    const newPollInterval = setInterval(async () => {
+      // Skip polling if we're actively sending messages or component is unmounting
+      if (sendingMessage) return;
+      
+      try {
+        if (activeChat && localErrorCount < MAX_ERRORS) {
+          // Use lastMessageId for efficient polling
+          const lastMessageId = messages.length > 0 ? messages[messages.length - 1]._id : 'none';
+          
+          const response = await fetch(`/api/chats/${activeChat._id}/messages/poll?lastMessageId=${lastMessageId}`);
+          
+          if (!response.ok) {
+            throw new Error(`Error polling messages: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          // Only fetch messages if there are actually new ones
+          if (data.hasNewMessages) {
+            await fetchMessages(activeChat._id);
+            // Only update newMessageReceived if it's not already true
+            // to avoid unnecessary state updates and re-renders
+            if (!newMessageReceived) {
+              setNewMessageReceived(true);
+            }
+          }
+          
+          // Reset error count on success, but only update state if changed
+          localErrorCount = 0;
+          if (errorCount !== 0) {
+            setErrorCount(0);
+          }
+        }
+      } catch (err) {
+        console.error('Error polling for new messages:', err);
+        localErrorCount += 1;
+        
+        // Only update error count in state if it changes
+        if (errorCount !== localErrorCount) {
+          setErrorCount(localErrorCount);
+        }
+        
+        if (localErrorCount >= MAX_ERRORS) {
+          console.error('Stopping polling due to consecutive errors');
+          clearInterval(newPollInterval);
+          setPollingIntervalId(null);
+        }
+      }
+    }, 15000); // Poll every 15 seconds
+    
+    // Save the interval ID for cleanup
+    setPollingIntervalId(newPollInterval);
+    
+    return () => {
+      clearInterval(newPollInterval);
+      setPollingIntervalId(null);
+    };
+  }, [activeChat, chatNotFound, messagesLoading, messages, newMessageReceived, errorCount, sendingMessage]);
   
-  // Handle sending a message
-  const handleSendMessage = async (messageData) => {
-    if (!messageData.content.trim() && (!messageData.attachments || messageData.attachments.length === 0)) {
+  // Update the useEffect for handling scroll behavior - optimize to reduce rerenders
+  useEffect(() => {
+    // Only handle scroll updates if:
+    // 1. Messages have loaded (not in loading state)
+    // 2. There are messages to scroll to
+    // 3. Either we have a new message or we're actively sending one
+    if (messagesLoading || messages.length === 0 || (!newMessageReceived && !sendingMessage)) {
+      return;
+    }
+    
+    // Use a single requestAnimationFrame to batch DOM operations
+    const frameId = requestAnimationFrame(() => {
+      if (!messagesContainerRef.current || !messagesEndRef.current) return;
+      
+      try {
+        const container = messagesContainerRef.current;
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        
+        if (isNearBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      } catch (error) {
+        console.error('Error handling scroll update:', error);
+      }
+    });
+    
+    return () => cancelAnimationFrame(frameId);
+  }, [messages, messagesLoading, newMessageReceived, sendingMessage]);
+  
+  // Handle sending a message - memoize the callback to prevent rerenders
+  const handleSendMessage = useCallback(async (messageData) => {
+    if (!activeChat || !activeChat._id) {
+      toast.error('No active chat selected');
       return;
     }
     
     try {
-      // Format the data to match what the backend expects
-      const formData = new FormData();
-      formData.append('content', messageData.content);
+      // Create a simple flag to track if we should scroll after sending
+      const shouldScrollAfter = true;
       
-      // Add attachments if any
-      if (messageData.attachments && messageData.attachments.length > 0) {
-        messageData.attachments.forEach(file => {
-          formData.append('attachments', file);
-        });
+      // Validate messageData format
+      const hasContent = messageData.content && messageData.content.trim().length > 0;
+      const hasAttachments = messageData.attachments && 
+                            Array.isArray(messageData.attachments) && 
+                            messageData.attachments.length > 0;
+      
+      if (!hasContent && !hasAttachments) {
+        toast.error('Message cannot be empty');
+        return;
+      }
+
+      // Call the sendMessage function without validating each attachment again
+      // to prevent unnecessary object iteration
+      await sendMessage(
+        activeChat._id, 
+        hasContent ? messageData.content : '', 
+        hasAttachments ? messageData.attachments : []
+      );
+      
+      // If this was previously an empty chat, it now has messages
+      if (messages.length === 0 && activeChat._id) {
+        // Ensure it stays in loadedChatIds to prevent reload
+        setLoadedChatIds(prev => new Set([...prev, activeChat._id]));
       }
       
-      // Send the message through the chat context
-      await sendMessage(chatId, formData);
-      
-      // If AI assistant is enabled, automatically fetch messages again after a delay
-      // to show the AI response
-      if (activeChat?.aiAssistant?.enabled) {
-        setTimeout(() => {
-          fetchMessages(chatId);
-        }, 1000);
+      // Set a single state update after message is sent to trigger scroll
+      if (shouldScrollAfter) {
+        setNewMessageReceived(true);
       }
+      
+      // Don't fetch messages immediately after sending - the backend should return
+      // the sent message and our context should update automatically,
+      // and we already have polling in place
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message. Please try again.');
+      
+      // Simplify error handling
+      let errorMessage = 'Failed to send message';
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'Invalid message format';
+        } else if (error.response.status === 413) {
+          errorMessage = 'File(s) too large. Maximum size is 10MB per file';
+        } else {
+          errorMessage = error.response.data?.message || errorMessage;
+        }
+      }
+      
+      toast.error(errorMessage);
     }
-  };
+  }, [activeChat, sendMessage, messages.length]);
   
-  // Create new chat
-  const handleCreateChat = () => {
+  // Create new chat - Stable reference
+  const handleCreateChat = useCallback(() => {
     setShowCreateModal(true);
-  };
+  }, []);
   
-  // Open chat settings
-  const handleOpenSettings = () => {
+  // Open chat settings - Stable reference
+  const handleOpenSettings = useCallback(() => {
     setShowSettingsModal(true);
-  };
+  }, []);
   
-  // Chat header
-  const renderChatHeader = () => {
+  // Chat header - Memoized to prevent re-renders
+  const chatHeader = useMemo(() => {
     if (!activeChat) return null;
     
     // Get the correct base path based on user role
@@ -208,7 +445,7 @@ const ChatPage = () => {
             <div className="ml-3">
               <div className="font-medium">{activeChat.name}</div>
               <div className="text-xs text-gray-500">
-                {activeChat.participants.length} participants
+                {activeChat.participants && activeChat.participants.length} participants
                 {activeChat.aiAssistant?.enabled && (
                   <span className="ml-2 flex items-center text-green-600">
                     <FaRobot className="mr-1" /> AI Assistant
@@ -227,102 +464,112 @@ const ChatPage = () => {
         </button>
       </div>
     );
-  };
+  }, [activeChat, user?.role, navigate, handleOpenSettings]);
   
-  // Message list
-  const renderMessages = () => {
-    if (messagesLoading && messages.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-          <div className="mt-2 text-gray-500">Loading messages...</div>
-        </div>
-      );
+  // Memoize the ChatInput component to prevent needless re-renders
+  const chatInputComponent = useMemo(() => {
+    if (!activeChat) return null;
+    
+    return (
+      <ChatInput 
+        onSendMessage={handleSendMessage}
+        disabled={!activeChat || sendingMessage || messagesLoading}
+      />
+    );
+  }, [activeChat, handleSendMessage, sendingMessage, messagesLoading]);
+  
+  // Use a single memoized component for messages instead of duplicating
+  const chatMessageSection = useMemo(() => {
+    if (loading) {
+      return <LoadingScreen />;
     }
     
-    if (messages.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500">
-          <div className="text-lg mb-2">No messages yet</div>
-          <div className="text-sm">Be the first to send a message!</div>
-        </div>
-      );
+    if (!activeChat) {
+      return <NoChatSelectedScreen onCreateChat={handleCreateChat} />;
+    }
+    
+    // Reset newMessageReceived when rendering new messages to prevent continuous scrolling
+    if (newMessageReceived && !messagesLoading) {
+      // Use setTimeout to ensure state update occurs after render
+      setTimeout(() => {
+        setNewMessageReceived(false);
+      }, 100);
     }
     
     return (
+      <ChatMessages
+        key={`chat-${activeChat?._id || 'empty'}`}
+        messages={messages}
+        messagesLoading={messagesLoading}
+        messagesEndRef={messagesEndRef}
+        messagesContainerRef={messagesContainerRef}
+        isNewMessage={newMessageReceived}
+        sendingMessage={sendingMessage}
+        user={user}
+      />
+    );
+  }, [activeChat, loading, messages, messagesLoading, newMessageReceived, sendingMessage, user, handleCreateChat]);
+  
+  // Handle chat navigation - Stable reference with useCallback
+  const handleChatSelect = useCallback((id) => {
+    // Reset chat not found state
+    setChatNotFound(false);
+    setErrorCount(0);
+    
+    // Navigate to the correct path based on user role
+    const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
+    navigate(`${basePath}/${id}`);
+  }, [user?.role, navigate]);
+  
+  // Optimize the main content rendering with better transition control
+  const mainContent = useMemo(() => {
+    // Pre-render both screens to avoid transition flicker
+    return (
       <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-        style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 160px)' }}
+        className={`flex flex-col flex-1 h-full overflow-hidden chat-transition ${!chatId ? 'hidden md:flex' : 'flex'}`}
+        style={{
+          transition: 'opacity 0.25s ease-in-out',
+          opacity: messagesLoading && !messages.length ? 0.7 : 1,
+          contain: 'content'
+        }}
       >
-        {messagesLoading && messages.length > 0 && (
-          <div className="flex justify-center my-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+        {activeChat ? (
+          <div className="flex flex-col h-full fixed-container">
+            {chatHeader}
+            <div className="flex-grow overflow-hidden flex flex-col relative contain-layout">
+              {chatMessageSection}
+              {chatInputComponent}
+            </div>
           </div>
+        ) : (
+          <EmptyStateScreen onCreateChat={handleCreateChat} />
         )}
-        
-        {messages.map((message) => (
-          <MessageItem 
-            key={message._id} 
-            message={message} 
-            isCurrentUser={message.sender._id === user?._id}
-            isAI={message.isAIMessage || message.sender.isAI}
-            onReply={(replyMessage) => {
-              // Scroll message input into view and focus it
-              document.querySelector('.message-input')?.focus();
-              // You could also add functionality to show which message is being replied to
-            }}
-          />
-        ))}
-        <div ref={messagesEndRef} />
       </div>
     );
-  };
+  }, [chatId, activeChat, chatHeader, chatMessageSection, chatInputComponent, handleCreateChat, messagesLoading, messages.length]);
   
-  return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar - hidden on mobile when a chat is active */}
-      <div className={`w-full md:w-80 bg-white border-r border-gray-200 ${chatId ? 'hidden md:block' : 'block'}`}>
-        <ChatSidebar 
-          onCreateChat={handleCreateChat} 
-          onSelectChat={(id) => {
-            // Navigate to the correct path based on user role
-            const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
-            navigate(`${basePath}/${id}`);
-          }}
-        />
-      </div>
-      
-      {/* Main chat area */}
-      <div className={`flex flex-col flex-1 ${!chatId ? 'hidden md:flex' : 'flex'}`}>
-        {activeChat ? (
-          <>
-            {renderChatHeader()}
-            {renderMessages()}
-            <ChatInput 
-              onSendMessage={handleSendMessage} 
-              disabled={loading || !activeChat || sendingMessage}
-            />
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <div className="text-xl mb-2">Select a chat or create a new one</div>
-            <button
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              onClick={handleCreateChat}
-            >
-              Create New Chat
-            </button>
-          </div>
-        )}
-      </div>
-      
+  // Memoize the sidebar component
+  const sidebarComponent = useMemo(() => (
+    <div className={`w-full md:w-80 bg-white border-r border-gray-200 ${chatId ? 'hidden md:block' : 'block'}`}>
+      <ChatSidebar 
+        onCreateChat={handleCreateChat} 
+        onSelectChat={handleChatSelect}
+      />
+    </div>
+  ), [chatId, handleCreateChat, handleChatSelect]);
+  
+  // Memoize modals to prevent re-renders
+  const modalsComponent = useMemo(() => (
+    <>
       {/* Create Chat Modal */}
       {showCreateModal && (
         <CreateChatModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={(chatId) => {
             setShowCreateModal(false);
+            // Reset chat not found state
+            setChatNotFound(false);
+            setErrorCount(0);
             // Navigate to the correct path based on user role
             const basePath = user.role === 'admin' ? '/admin/chat' : '/user/chat';
             navigate(`${basePath}/${chatId}`);
@@ -337,6 +584,14 @@ const ChatPage = () => {
           onClose={() => setShowSettingsModal(false)}
         />
       )}
+    </>
+  ), [showCreateModal, showSettingsModal, activeChat, user?.role, navigate]);
+  
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {sidebarComponent}
+      {mainContent}
+      {modalsComponent}
     </div>
   );
 };
