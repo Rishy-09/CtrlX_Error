@@ -1,4 +1,5 @@
 import React from 'react';
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Analytics } from '@vercel/analytics/react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useContext } from 'react';
@@ -49,6 +50,7 @@ const App = () => {
         <div>
           <Router>
           <Analytics />
+          <SpeedInsights/>
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login/>} />
