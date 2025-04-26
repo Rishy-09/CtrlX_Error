@@ -57,7 +57,7 @@ const Navigation = () => {
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
               <Link to={user ? (user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard') : '/'} className="text-xl font-bold text-primary">
-                TaskManager
+                Bug Tracker
               </Link>
             </div>
           </div>
@@ -85,7 +85,7 @@ const Navigation = () => {
                       Dashboard
                     </Link>
                     <Link to="/admin/tasks" className={`px-3 py-2 text-sm font-medium ${location.pathname.includes('/admin/tasks') ? 'text-primary' : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-white'}`}>
-                      Tasks
+                      Bugs
                     </Link>
                     <Link to="/admin/users" className={`px-3 py-2 text-sm font-medium ${location.pathname.includes('/admin/users') ? 'text-primary' : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-white'}`}>
                       Users
@@ -100,7 +100,7 @@ const Navigation = () => {
                       Dashboard
                     </Link>
                     <Link to="/user/tasks" className={`px-3 py-2 text-sm font-medium ${location.pathname.includes('/user/tasks') ? 'text-primary' : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-white'}`}>
-                      My Tasks
+                      My Bugs
                     </Link>
                     <Link to="/user/chat" className={`px-3 py-2 text-sm font-medium ${location.pathname.includes('/user/chat') ? 'text-primary' : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-white'}`}>
                       Chat
