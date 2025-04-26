@@ -1,4 +1,5 @@
 import React from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useContext } from 'react';
 import Dashboard from "./pages/Admin/Dashboard.jsx";
@@ -47,6 +48,7 @@ const App = () => {
       <ChatProvider>
         <div>
           <Router>
+          <Analytics />
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login/>} />
