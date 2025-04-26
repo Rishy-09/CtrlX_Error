@@ -83,3 +83,122 @@
 .user-card {
     @apply bg-white p-4 rounded-xl shadow-md shadow-gray-100 border border-gray-200/50;
 }
+
+/* Add these rules to prevent flickering */
+* {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  will-change: auto;
+  box-sizing: border-box;
+}
+
+/* Improve scrolling performance */
+.overflow-y-auto, 
+.overflow-auto, 
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+}
+
+/* Force hardware acceleration for animations */
+.flex,
+.flex-col,
+.h-full,
+.h-screen {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Stabilize fixed and sticky elements */
+.fixed, 
+.sticky, 
+.absolute {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Chat message specific optimizations */
+.chat-message {
+  contain: content;
+  will-change: transform;
+}
+
+/* Prevent content jumps for layout */
+.flex-grow {
+  contain: layout style;
+}
+
+/* Performance optimization for attachment rendering */
+.attachment-preview {
+  contain: content;
+  will-change: auto;
+}
+
+/* Spinner animation optimizations */
+.spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s linear infinite;
+  width: 2rem;
+  height: 2rem;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add transition classes to prevent flickering */
+.chat-transition {
+  transition: opacity 0.2s ease-in-out;
+  will-change: opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Prevent layout shifts */
+.page-container {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  contain: layout style paint;
+}
+
+/* Stabilize rendering with contain properties */
+.contain-paint {
+  contain: paint;
+}
+
+.contain-layout {
+  contain: layout;
+}
+
+/* Prevent flickering with stable positioning */
+.fixed-container {
+  position: relative;
+  z-index: 1;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize for low-end devices with reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Make active chat item visually distinct with smoother transitions */
+.active-chat-item {
+  border-left: 4px solid #3b82f6;
+  background-color: #eff6ff;
+  transition: background-color 0.2s ease-in-out, border-left 0.1s ease-in-out;
+}

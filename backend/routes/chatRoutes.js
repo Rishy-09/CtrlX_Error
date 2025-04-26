@@ -14,6 +14,7 @@ import {
   deleteReaction
 } from "../controllers/chatController.js";
 import uploadMiddleware from "../middlewares/uploadMiddleware.js";
+import { normalizeChatIdParam } from "../middlewares/paramMiddleware.js";
 
 const router = express.Router();
 
@@ -33,15 +34,15 @@ router.route("/:id")
 // Participant management
 router.put("/:id/participants", updateParticipants);
 
-// Message routes
+// Message routes - use normalizeChatIdParam to handle parameter name mismatch
 router.route("/:id/messages")
-  .get(getMessages)
-  .post(uploadMiddleware.array("attachments", 5), sendMessage);
+  .get(normalizeChatIdParam, getMessages)
+  .post(normalizeChatIdParam, uploadMiddleware.array("attachments", 5), sendMessage);
 
-router.delete("/:chatId/messages/:messageId", deleteMessage);
+router.delete("/:id/messages/:messageId", normalizeChatIdParam, deleteMessage);
 
-// Reactions
-router.post("/:chatId/messages/:messageId/reactions", addReaction);
-router.delete("/:chatId/messages/:messageId/reactions/:reactionId", deleteReaction);
+// Reactions - use normalizeChatIdParam to handle parameter name mismatch
+router.post("/:id/messages/:messageId/reactions", normalizeChatIdParam, addReaction);
+router.delete("/:id/messages/:messageId/reactions/:reactionId", normalizeChatIdParam, deleteReaction);
 
 export default router; 

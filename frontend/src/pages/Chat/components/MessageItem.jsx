@@ -1,241 +1,380 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, memo, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { FaRobot, FaEllipsisV, FaTrashAlt, FaRegSmile, FaReply } from 'react-icons/fa';
 import { useChat } from '../../../context/ChatContext';
 import { FiDownload, FiFile } from 'react-icons/fi';
 import { UserContext } from '../../../context/userContext';
 
-const MessageItem = ({ message, onReply }) => {
-  const { user } = useContext(UserContext);
-  const isCurrentUser = message.sender._id === user?._id;
-  const isAI = message.isAIMessage || message.sender.isAI;
-  const { activeChat, deleteMessage, addReaction } = useChat();
-  const [showActions, setShowActions] = useState(false);
+// Format file size helper
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 Bytes';
   
-  // Format message time
-  const formatTime = (dateString) => {
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Format message time with error handling
+const formatTime = (dateString) => {
+  if (!dateString) return '';
+  try {
     return format(new Date(dateString), 'h:mm a');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
+  }
+};
+
+// Helper function to compare attachment objects for equality
+const areAttachmentsEqual = (prevAttachments, nextAttachments) => {
+  if (!prevAttachments && !nextAttachments) return true;
+  if (!prevAttachments || !nextAttachments) return false;
+  if (prevAttachments.length !== nextAttachments.length) return false;
+  
+  // Compare each attachment by its ID or other unique identifier
+  return prevAttachments.every((prevAtt, index) => {
+    const nextAtt = nextAttachments[index];
+    // Use _id if available, otherwise fall back to other identifiers
+    const prevId = prevAtt._id || prevAtt.id || prevAtt.name;
+    const nextId = nextAtt._id || nextAtt.id || nextAtt.name;
+    return prevId === nextId;
+  });
+};
+
+// Attachment component to optimize rendering
+const Attachment = memo(({ attachment, isCurrentUser }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  // Determine if this is an image based on MIME type or file type
+  const isImage = !imageError && (
+    attachment.mimeType?.startsWith('image/') || 
+    attachment.type?.startsWith('image/')
+  );
+  
+  // Handle image loading errors
+  const handleImageError = () => {
+    console.error('Error loading image:', attachment);
+    setImageError(true);
   };
   
-  // Handle message deletion
-  const handleDelete = () => {
-    deleteMessage(activeChat._id, message._id);
-    setShowActions(false);
-  };
+  // Select the appropriate URL for preview and download
+  const previewUrl = attachment.previewUrl || 
+                     (attachment._id ? `/api/attachments/view/${attachment._id}` : null);
   
-  // Handle adding reaction
-  const handleAddReaction = (emoji) => {
-    addReaction(activeChat._id, message._id, emoji);
-  };
+  const downloadUrl = attachment.fileUrl || 
+                      (attachment._id ? `/api/attachments/download/${attachment._id}` : null);
   
-  // Handle reply to message
-  const handleReply = () => {
-    if (onReply) {
-      onReply(message);
-      setShowActions(false);
-    }
-  };
+  // For temporary messages with attachments that are still being uploaded
+  const isTemporary = attachment.isTemporary || !attachment._id;
   
-  // Format attachments for display
-  const renderAttachments = () => {
-    if (!message.attachments || message.attachments.length === 0) return null;
-    
+  if (isImage && previewUrl) {
     return (
-      <div className="mt-2 flex flex-wrap gap-2">
-        {message.attachments.map((attachment) => {
-          const isImage = attachment.mimeType?.startsWith('image/') || 
-                          attachment.type?.startsWith('image/');
-          
-          return (
-            <div 
-              key={attachment._id || attachment.id || attachment.name}
-              className={`border rounded overflow-hidden ${isCurrentUser ? 'bg-blue-400' : 'bg-gray-100'}`}
+      <div className="relative w-28 h-28 group">
+        <img 
+          src={previewUrl}
+          alt={attachment.originalFilename || attachment.name || 'Image attachment'}
+          className={`w-full h-full object-cover ${isTemporary ? 'opacity-70' : ''}`} 
+          loading="lazy"
+          onError={handleImageError}
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
+          {!isTemporary && downloadUrl && (
+            <a 
+              href={downloadUrl}
+              download={attachment.originalFilename || attachment.name}
+              className="p-1.5 bg-white rounded-full"
+              onClick={(e) => e.stopPropagation()}
             >
-              {isImage ? (
-                <div className="relative w-28 h-28 group">
-                  <img 
-                    src={attachment.previewUrl || `/api/attachments/view/${attachment._id}`}
-                    alt={attachment.originalFilename || attachment.name}
-                    className="w-full h-full object-cover" 
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <a 
-                      href={attachment.fileUrl || `/api/attachments/download/${attachment._id}`}
-                      download={attachment.originalFilename || attachment.name}
-                      className="p-1.5 bg-white rounded-full"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <FiDownload size={16} className="text-gray-700" />
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className={`flex items-center p-2 ${isCurrentUser ? 'text-white' : 'text-gray-700'}`}>
-                  <FiFile size={18} className="mr-2 flex-shrink-0" />
-                  <div className="flex-1 min-w-0 mr-2">
-                    <p className="text-sm font-medium truncate max-w-[150px]">
-                      {attachment.originalFilename || attachment.name}
-                    </p>
-                    {(attachment.size || attachment.fileSize) && (
-                      <p className="text-xs opacity-75">
-                        {formatFileSize(attachment.size || attachment.fileSize)}
-                      </p>
-                    )}
-                  </div>
-                  <a 
-                    href={attachment.fileUrl || `/api/attachments/download/${attachment._id}`}
-                    download={attachment.originalFilename || attachment.name}
-                    className={`p-1 rounded ${isCurrentUser ? 'hover:bg-blue-600' : 'hover:bg-gray-200'}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <FiDownload size={14} />
-                  </a>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-  
-  // Format file size
-  const formatFileSize = (bytes) => {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-  
-  // Render message reactions
-  const renderReactions = () => {
-    if (!message.reactions || message.reactions.length === 0) return null;
-    
-    // Group reactions by emoji
-    const reactionGroups = message.reactions.reduce((groups, reaction) => {
-      if (!groups[reaction.emoji]) {
-        groups[reaction.emoji] = [];
-      }
-      groups[reaction.emoji].push(reaction.user);
-      return groups;
-    }, {});
-    
-    return (
-      <div className="flex mt-1 space-x-1">
-        {Object.entries(reactionGroups).map(([emoji, users]) => (
-          <div 
-            key={emoji}
-            className="bg-gray-100 rounded-full px-2 py-0.5 text-xs flex items-center cursor-pointer hover:bg-gray-200"
-            onClick={() => handleAddReaction(emoji)}
-            title={users.map(u => u.name || u.username).join(', ')}
-          >
-            <span className="mr-1">{emoji}</span>
-            <span>{users.length}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-  
-  return (
-    <div 
-      className={`mb-4 ${isCurrentUser ? 'ml-auto' : ''}`}
-      style={{ maxWidth: '75%' }}
-    >
-      <div className="flex items-start">
-        {/* Message content */}
-        <div 
-          className={`relative rounded-lg p-3 ${
-            isCurrentUser 
-              ? 'bg-blue-500 text-white' 
-              : isAI 
-                ? 'bg-purple-100 border border-purple-200 text-gray-800' 
-                : 'bg-gray-100 text-gray-800'
-          }`}
-        >
-          {/* Sender name for non-current user */}
-          {!isCurrentUser && (
-            <div className="flex items-center mb-1">
-              {isAI ? (
-                <div className="flex items-center">
-                  <FaRobot className="mr-1 text-purple-500" />
-                  <span className="font-medium text-xs text-purple-600">
-                    AI Assistant
-                  </span>
-                </div>
-              ) : (
-                <span className="font-medium text-xs text-gray-600">
-                  {message.sender.name || message.sender.username || 'User'}
-                </span>
-              )}
-            </div>
+              <FiDownload size={16} className="text-gray-700" />
+            </a>
           )}
-          
-          {/* Message text */}
-          <div className={`text-sm whitespace-pre-wrap ${isAI ? 'prose prose-sm max-w-none' : ''}`}>
-            {message.content}
-          </div>
-          
-          {/* Attachments */}
-          {renderAttachments()}
-          
-          {/* Message time */}
-          <div className={`text-xs mt-1 ${isCurrentUser ? 'text-blue-200' : isAI ? 'text-purple-400' : 'text-gray-500'}`}>
-            {formatTime(message.createdAt)}
-          </div>
-          
-          {/* Reactions */}
-          {renderReactions()}
-          
-          {/* Message actions - don't show for AI messages */}
-          {!isAI && (
-            <div className="absolute top-2 right-2">
-              <button 
-                className={`p-1 rounded-full ${isCurrentUser ? 'text-white hover:bg-blue-600' : 'text-gray-500 hover:bg-gray-200'}`}
-                onClick={() => setShowActions(!showActions)}
-              >
-                <FaEllipsisV size={12} />
-              </button>
-              
-              {showActions && (
-                <div className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg z-10">
-                  <div className="py-1">
-                    {onReply && (
-                      <button 
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                        onClick={handleReply}
-                      >
-                        <FaReply className="mr-2" /> Reply
-                      </button>
-                    )}
-                    
-                    <button 
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                      onClick={() => setShowActions(false)}
-                    >
-                      <FaRegSmile className="mr-2" /> Add Reaction
-                    </button>
-                    
-                    {isCurrentUser && (
-                      <button 
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
-                        onClick={handleDelete}
-                      >
-                        <FaTrashAlt className="mr-2" /> Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
+          {isTemporary && (
+            <div className="p-1.5 bg-white rounded-full">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
             </div>
           )}
         </div>
       </div>
+    );
+  }
+  
+  return (
+    <div className={`flex items-center p-2 ${isCurrentUser ? 'text-white' : 'text-gray-700'}`}>
+      <FiFile size={18} className="mr-2 flex-shrink-0" />
+      <div className="flex-1 min-w-0 mr-2">
+        <p className="text-sm font-medium truncate max-w-[150px]">
+          {attachment.originalFilename || attachment.name || 'File attachment'}
+        </p>
+        {(attachment.size || attachment.fileSize) && (
+          <p className="text-xs opacity-75">
+            {formatFileSize(attachment.size || attachment.fileSize)}
+          </p>
+        )}
+      </div>
+      {!isTemporary && downloadUrl ? (
+        <a 
+          href={downloadUrl}
+          download={attachment.originalFilename || attachment.name}
+          className={`p-1 rounded ${isCurrentUser ? 'hover:bg-blue-600' : 'hover:bg-gray-200'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FiDownload size={14} />
+        </a>
+      ) : (
+        <div className="p-1">
+          <div className="animate-spin h-3 w-3 border-2 border-gray-400 border-t-transparent rounded-full" />
+        </div>
+      )}
     </div>
   );
-};
+});
+
+// Reaction component to optimize rendering
+const Reactions = memo(({ reactions, onAddReaction }) => {
+  if (!reactions || reactions.length === 0) return null;
+  
+  // Group reactions by emoji
+  const reactionGroups = reactions.reduce((groups, reaction) => {
+    if (!groups[reaction.emoji]) {
+      groups[reaction.emoji] = [];
+    }
+    groups[reaction.emoji].push(reaction.user);
+    return groups;
+  }, {});
+  
+  return (
+    <div className="flex mt-1 space-x-1">
+      {Object.entries(reactionGroups).map(([emoji, users]) => (
+        <div 
+          key={emoji}
+          className="bg-gray-100 rounded-full px-2 py-0.5 text-xs flex items-center cursor-pointer hover:bg-gray-200"
+          onClick={() => onAddReaction(emoji)}
+          title={users.map(u => u.name || u.username).join(', ')}
+        >
+          <span className="mr-1">{emoji}</span>
+          <span>{users.length}</span>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// Main MessageItem component with optimized rendering
+const MessageItem = memo(({ message, className = '' }) => {
+  const { user } = useContext(UserContext);
+  const { deleteMessage, addReaction } = useChat();
+  const [showActions, setShowActions] = useState(false);
+  
+  const isCurrentUser = useMemo(() => {
+    return message.sender?._id === user?._id;
+  }, [message.sender?._id, user?._id]);
+
+  // Cache the message ID to avoid lookups in multiple places
+  const messageId = useMemo(() => message._id, [message._id]);
+  
+  // Memoize handler functions to avoid recreating them on each render
+  const handleDeleteMessage = useCallback(() => {
+    if (window.confirm('Are you sure you want to delete this message?')) {
+      deleteMessage(messageId);
+    }
+  }, [deleteMessage, messageId]);
+  
+  const handleAddReaction = useCallback((emoji) => {
+    addReaction(messageId, emoji);
+  }, [addReaction, messageId]);
+  
+  // Create a stable attachments array reference with deep comparison
+  const attachmentsArray = useMemo(() => {
+    if (!message.attachments || message.attachments.length === 0) {
+      return [];
+    }
+    
+    // Log attachment debugging info
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Processing ${message.attachments.length} attachments for message:`, 
+        message.attachments.map(a => ({
+          id: a._id || a.id,
+          name: a.originalFilename || a.name,
+          type: a.mimeType || a.type,
+          size: a.size || a.fileSize
+        }))
+      );
+    }
+    
+    // Ensure attachments are properly formatted with consistent property names
+    return message.attachments.map(attachment => {
+      // Standardize attachment properties to handle both server and client-side formats
+      const standardizedAttachment = {
+        ...attachment,
+        _id: attachment._id || attachment.id || `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        name: attachment.originalFilename || attachment.name || 'Unnamed file',
+        type: attachment.mimeType || attachment.type || 'application/octet-stream',
+        size: attachment.size || attachment.fileSize || 0,
+        isTemporary: attachment.isTemporary || false
+      };
+      
+      // If this is a temporary attachment being uploaded, keep the local preview URL
+      if (!standardizedAttachment.previewUrl && 
+          standardizedAttachment.type.startsWith('image/') && 
+          standardizedAttachment._id) {
+        standardizedAttachment.previewUrl = `/api/attachments/view/${standardizedAttachment._id}`;
+      }
+      
+      return standardizedAttachment;
+    });
+  }, [message.attachments]);
+
+  // Memoize attachments rendering with proper dependency tracking
+  const attachmentsContent = useMemo(() => {
+    if (attachmentsArray.length === 0) return null;
+    
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {attachmentsArray.map((attachment) => (
+          <div 
+            key={attachment._id || attachment.id || attachment.name}
+            className={`border rounded overflow-hidden ${isCurrentUser ? 'bg-blue-400' : 'bg-gray-100'}`}
+            style={{ contain: 'content', willChange: 'auto' }}
+          >
+            <Attachment 
+              attachment={attachment} 
+              isCurrentUser={isCurrentUser} 
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }, [attachmentsArray, isCurrentUser]);
+  
+  // Memoize reactions rendering
+  const reactionsContent = useMemo(() => {
+    return (
+      <Reactions 
+        reactions={message.reactions} 
+        onAddReaction={handleAddReaction} 
+      />
+    );
+  }, [message.reactions, handleAddReaction]);
+    
+  // Memoize the time format to avoid recalculation
+  const formattedTime = useMemo(() => {
+    return formatTime(message.createdAt);
+  }, [message.createdAt]);
+  
+  // Optimize message action buttons
+  const actionButtons = useMemo(() => {
+    if (!showActions) return null;
+    
+    return (
+      <div className="absolute right-0 -top-10 bg-white shadow rounded-lg flex">
+        <button 
+          className="p-2 hover:bg-gray-100 rounded-l-lg"
+          onClick={() => handleAddReaction('👍')}
+        >
+          <FaRegSmile size={14} />
+        </button>
+        <button 
+          className="p-2 hover:bg-gray-100"
+          onClick={() => console.log('Reply to message')}
+        >
+          <FaReply size={14} />
+        </button>
+        {isCurrentUser && (
+          <button 
+            className="p-2 hover:bg-gray-100 text-red-500 rounded-r-lg"
+            onClick={handleDeleteMessage}
+          >
+            <FaTrashAlt size={14} />
+          </button>
+        )}
+      </div>
+    );
+  }, [showActions, handleAddReaction, isCurrentUser, handleDeleteMessage]);
+  
+  // Memoize the entire message container to reduce re-renders
+  return (
+    <div 
+      className={`relative message-item group ${className}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+      style={{ contain: 'content', willChange: 'auto' }}
+    >
+      <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+        <div className={`max-w-[85%] relative ${isCurrentUser ? 'order-2' : 'order-1'}`}>
+          {/* Message bubble */}
+          <div 
+            className={`rounded-lg p-3 ${
+              isCurrentUser 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-200 text-gray-800'
+            }`}
+          >
+            {/* Sender name - only show if not current user */}
+            {!isCurrentUser && (
+              <div className="font-semibold text-sm mb-1">
+                {message.sender?.username || message.sender?.name || 'Unknown User'}
+                {message.sender?.isAI && (
+                  <FaRobot className="inline-block ml-1 text-blue-500" />
+                )}
+              </div>
+            )}
+            
+            {/* Message content */}
+            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            
+            {/* Attachments section */}
+            {attachmentsContent}
+          </div>
+          
+          {/* Reactions */}
+          <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+            {reactionsContent}
+          </div>
+          
+          {/* Message time */}
+          <div 
+            className={`text-xs text-gray-500 mt-1 ${
+              isCurrentUser ? 'text-right' : 'text-left'
+            }`}
+          >
+            {formattedTime}
+          </div>
+        </div>
+        
+        {/* Action buttons */}
+        {actionButtons}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memoization to prevent unnecessary re-renders
+  // Only re-render if important props change
+  
+  // If message ID is different, definitely re-render
+  if (prevProps.message._id !== nextProps.message._id) return false;
+  
+  // If message content changed, re-render
+  if (prevProps.message.content !== nextProps.message.content) return false;
+  
+  // If deleted state changed, re-render
+  if (prevProps.message.deleted !== nextProps.message.deleted) return false;
+  
+  // If reactions changed (in length), re-render
+  if (
+    (!prevProps.message.reactions && nextProps.message.reactions) ||
+    (prevProps.message.reactions && !nextProps.message.reactions) ||
+    (prevProps.message.reactions?.length !== nextProps.message.reactions?.length)
+  ) return false;
+  
+  // Deep compare attachments
+  if (!areAttachmentsEqual(prevProps.message.attachments, nextProps.message.attachments)) {
+    return false;
+  }
+  
+  // Otherwise, don't re-render
+  return true;
+});
 
 export default MessageItem; 

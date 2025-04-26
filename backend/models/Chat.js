@@ -37,6 +37,11 @@ const chatSchema = new mongoose.Schema(
             ref: "Bug",
             default: null
         },
+        lastMessage: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null
+        },
         aiAssistant: {
             enabled: {
                 type: Boolean,
