@@ -5,7 +5,7 @@ import UI_IMG from '../../assets/images/auth-bg.jpeg'
 const AuthLayout = ({children}) => {
   return <div className="flex">
         <div className="w-screen h-screen md:w-[60vw px-12 pt-8 pb-12">
-            <h2 className="text-lg font-medium text-gray-800">Task Manager</h2>
+            <h2 className="text-lg font-medium text-gray-800">CtrlX-Error</h2>
             {children}
         </div>
 

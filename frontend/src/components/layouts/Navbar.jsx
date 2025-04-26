@@ -104,7 +104,7 @@ const Navbar = () => {
             
             {/* Logo */}
             <Link to={getBasePath() + '/dashboard'} className="flex items-center">
-              <span className="font-bold text-xl text-blue-600 dark:text-blue-400">TaskPro</span>
+              <span className="font-bold text-xl text-blue-600 dark:text-blue-400">CtrlX-Error</span>
             </Link>
             
             {/* Desktop Navigation Links */}
@@ -121,7 +121,7 @@ const Navbar = () => {
                     to={getBasePath() + '/tasks'}
                     className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    Tasks
+                    Bugs
                   </Link>
                   <Link
                     to={getBasePath() + '/chat'}
@@ -185,8 +185,8 @@ const Navbar = () => {
                 
                 {/* Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="py-1">
+                  <div className="origin-top-right absolute right-0 mt-2 w-60 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 ">
+                    <div className="py-1 ">
                       <div className="px-4 py-3 border-b dark:border-gray-700">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={user.email}>{user.email}</p>
@@ -263,7 +263,7 @@ const Navbar = () => {
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={toggleMenu}
                 >
-                  Tasks
+                  Bugs
                 </Link>
                 <Link
                   to={getBasePath() + '/chat'}

@@ -28,7 +28,7 @@ const LandingPage = () => {
       <section className="relative bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-20">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
           <div className="md:w-1/2 md:pr-12 mb-10 md:mb-0">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Powerful Task Management for Teams</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Powerful Bug Tracker for Teams</h1>
             <p className="text-xl mb-8">Streamline your workflow, track bugs effectively, and collaborate seamlessly with your team.</p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
               <Link to="/signUp" className="px-6 py-3 bg-white text-blue-600 rounded-lg font-medium hover:bg-gray-100 text-center">
@@ -41,7 +41,7 @@ const LandingPage = () => {
           </div>
           <div className="md:w-1/2">
             <img 
-              src="https://placehold.co/600x400/3b82f6/ffffff?text=Task+Management" 
+              src="https://placehold.co/600x400/3b82f6/ffffff?text=Bug+Management" 
               alt="Task Management Dashboard Preview" 
               className="rounded-lg shadow-xl"
             />
@@ -65,9 +65,9 @@ const LandingPage = () => {
               <div className="bg-blue-100 w-14 h-14 rounded-full flex items-center justify-center mb-6">
                 <FaTasks className="text-blue-600 text-2xl" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Task Management</h3>
+              <h3 className="text-xl font-semibold mb-3">Bug Management</h3>
               <p className="text-gray-600">
-                Create, assign, and track tasks with deadlines, priorities, and custom statuses to keep your team organized.
+                Create, assign, and track Bugs with deadlines, priorities, and custom statuses to keep your team organized.
               </p>
             </div>
             
@@ -133,9 +133,9 @@ const LandingPage = () => {
       <section id="about" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">About TaskPro</h2>
+            <h2 className="text-3xl font-bold mb-6">About CtrlX-Error</h2>
             <p className="text-lg text-gray-600 mb-10">
-              TaskPro is a comprehensive task management system designed for modern development teams. Built with focus on usability, 
+              CtrlX-Error is a comprehensive Bug management system designed for modern development teams. Built with focus on usability, 
               collaboration, and efficiency, our platform helps teams of all sizes streamline their workflows and deliver projects on time.
             </p>
             
@@ -194,7 +194,7 @@ const LandingPage = () => {
                 </div>
               </div>
               <p className="text-gray-700">
-                "TaskPro has completely transformed how our team manages projects. The bug tracking system is incredibly detailed and has helped us reduce our resolution time by 30%."
+                "CtrlX-Error has completely transformed how our team manages projects. The bug tracking system is incredibly detailed and has helped us reduce our resolution time by 30%."
               </p>
             </div>
             
@@ -238,7 +238,7 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of teams already using TaskPro to streamline their workflow.
+            Join thousands of teams already using CtrlX-Error to streamline their workflow.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Link 
@@ -264,7 +264,7 @@ const LandingPage = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <FaTasks className="text-blue-400 text-2xl" />
-                <span className="text-xl font-bold">TaskPro</span>
+                <span className="text-xl font-bold">CtrlX-Error</span>
               </div>
               <p className="text-gray-400 mb-4">
                 Streamline your workflow, track bugs effectively, and collaborate seamlessly with your team.
@@ -314,7 +314,7 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} TaskPro. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Ctrlx-Error. All rights reserved.</p>
           </div>
         </div>
       </footer>
