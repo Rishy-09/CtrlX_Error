@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, adminOnly } from '../middlewares/authmiddleware.js';
+import { protect, adminOnly } from '../middlewares/authMiddleware.js';
 import {
   getTasks,
   getTaskById,
