@@ -84,28 +84,28 @@ const Dashboard = () => {
         </div>
         <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mt-5 '>
           <InfoCard 
-            label="Total Tasks"
+            label="Total Bugs"
             value={addThousandsSeparator(
               dashboardData?.charts?.taskDistribution?.All || 0
             )}
             color = "bg-primary"
           />  
           <InfoCard 
-            label="Pending Tasks"
+            label="Pending Bugs"
             value={addThousandsSeparator(
               dashboardData?.charts?.taskDistribution?.Pending || 0
             )}
             color = "bg-violet-500"
           />  
           <InfoCard 
-            label="In Progress Tasks"
+            label="In Progress Bugs"
             value={addThousandsSeparator(
               dashboardData?.charts?.taskDistribution?.InProgress || 0
             )}
             color = "bg-cyan-500"
           /> 
           <InfoCard 
-            label="Completed Tasks"
+            label="Completed Bugs"
             value={addThousandsSeparator(
               dashboardData?.charts?.taskDistribution?.Completed || 0
             )}
@@ -118,7 +118,7 @@ const Dashboard = () => {
 
         <div className='card'>
           <div className='flex items-center justify-between'>
-            <h5 className='font-medium'>Task Distribution</h5>
+            <h5 className='font-medium'>Bug Distribution</h5>
           </div>
 
           <CustomPieChart 
@@ -129,7 +129,7 @@ const Dashboard = () => {
         
         <div className='card'>
           <div className='flex items-center justify-between'>
-            <h5 className='font-medium'>Task Priority Levels</h5>
+            <h5 className='font-medium'>Bug Priority Levels</h5>
           </div>
 
           <CustomBarChart 
@@ -140,7 +140,7 @@ const Dashboard = () => {
         <div className='md:col-span-2'>
           <div className='card'>
             <div className='flex items-center justify-between'>
-              <h5 className='text-lg'>Recent Tasks</h5>
+              <h5 className='text-lg'>Recent Bugs</h5>
               <button className='card-btn' onClick={onSeeMore}>
                 See All <LuArrowRight className='text-base' />
               </button>
