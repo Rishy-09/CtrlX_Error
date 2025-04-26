@@ -74,7 +74,7 @@ const CreateTask = () => {
       return;
     }
     if (taskData.assignedTo?.length === 0) {
-      setError("Task not assigned to any member");
+      setError("Bug not assigned to any member");
       return;
     }
 
@@ -106,11 +106,11 @@ const CreateTask = () => {
         todoChecklist: todolist,
       });
 
-      toast.success("Task Created Successfully");
+      toast.success("Bug Created Successfully");
       clearData();
     } 
     catch (error) {
-      console.error("Error creating task:", error);
+      console.error("Error creating Bug:", error);
       setLoading(false);
     } 
     finally {
@@ -141,9 +141,9 @@ const CreateTask = () => {
           todoChecklist: todolist,
         }
     );
-    toast.success("Task Updated Successfully");
+    toast.success("Bug Updated Successfully");
     }catch (error) {
-      console.error("Error updating task:", error);
+      console.error("Error updating Bug:", error);
       setLoading(false);
     } 
     finally {
@@ -183,10 +183,10 @@ const CreateTask = () => {
     try {
       await axiosInstance.delete(API_PATHS.TASKS.DELETE_TASK(taskId));
       setOpenDeleteAlert(false);
-      toast.success("Task deleted successfully");
+      toast.success("Bug deleted successfully");
       navigate("/admin/tasks");
     } catch (error) {
-      console.error("Error deleting task:", 
+      console.error("Error deleting Bug:", 
         error.response?.data?.message || error.message
       );
     }
@@ -202,13 +202,13 @@ const CreateTask = () => {
   
 
   return (
-    <DashboardLayout activeMenu="Create Task">
+    <DashboardLayout activeMenu="Create Bug">
       <div className='mt-5'>
         <div className='grid grid-cols-1 md:grid-cols-4 mt-4'>
           <div className='form-card col-span-3'>
             <div className='flex items-center justify-between'>
               <h2 className='text-xl md:text-xl font-medium'>
-                {taskId ? "Update Task" : "Create Task"}
+                {taskId ? "Update Task" : "Create Bug"}
               </h2>
               
               {taskId && (
@@ -224,7 +224,7 @@ const CreateTask = () => {
 
             <div className='mt-4'>
               <label className="text-xs font-medium text-slate-600">
-                Task Title
+                Bug Title
               </label>
 
               <input 
@@ -243,7 +243,7 @@ const CreateTask = () => {
               </label>
 
               <textarea 
-                placeholder="Describe task"
+                placeholder="Describe Bug"
                 className="form-input"
                 rows={4}
                 value={taskData.description}
@@ -333,7 +333,7 @@ const CreateTask = () => {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {taskId ? "UPDATE TASK" : "CREATE TASK"}
+                {taskId ? "UPDATE BUG" : "CREATE BUG"}
               </button>
             </div>
           </div>
@@ -343,7 +343,7 @@ const CreateTask = () => {
       <Modal
         isOpen ={openDeleteAlert}
         onClose={() => setOpenDeleteAlert(false)}
-        title="Delete Task"
+        title="Delete Bug"
       >
         <DeleteAlert
           content = "Are you sure you want to delete this task?"

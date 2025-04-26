@@ -24,7 +24,7 @@ import MongoIdValidator from './components/MongoIdValidator.jsx';
 
 // Footer pages
 import TermsOfService from './pages/Terms/TermsOfService.jsx';
-import PrivacyPolicy from './pages/Terms/PrivacyPolicy.jsx';
+// import PrivacyPolicy from './pages/Terms/PrivacyPolicy.jsx';
 import DataStoragePolicy from './pages/Terms/DataStoragePolicy.jsx';
 import Features from './pages/Features/Features.jsx';
 import About from './pages/Company/About';
@@ -58,7 +58,7 @@ const App = () => {
               
               {/* Footer Pages */}
               <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+              {/*<Route path="/privacy" element={<PrivacyPolicy />} />*/}
               <Route path="/cookies" element={<DataStoragePolicy />} />
               <Route path="/data-storage" element={<DataStoragePolicy />} />
               <Route path="/features" element={<Features />} />
