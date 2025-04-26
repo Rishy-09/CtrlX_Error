@@ -4,7 +4,7 @@ import { useChat } from '../../context/ChatContext';
 import { UserContext } from '../../context/userContext';
 import { toast } from 'react-hot-toast';
 import { MdArrowBack } from 'react-icons/md';
-import { FaRobot } from 'react-icons/fa';
+import { FaRobot, FaUser, FaUsers, FaGlobe } from 'react-icons/fa';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 import ChatSidebar from './components/ChatSidebar';
 import MessageItem from './components/MessageItem';
@@ -13,6 +13,7 @@ import ChatSettingsModal from './components/ChatSettingsModal';
 import ChatInput from './components/ChatInput';
 import ChatMessages from './components/ChatMessages';
 import { isValidMongoId } from '../../utils/routeValidators';
+import axiosInstance from '../../utils/axiosInstance';
 
 // Create stable empty state components to prevent re-renders
 const EmptyStateScreen = React.memo(({ onCreateChat }) => (
@@ -268,16 +269,11 @@ const ChatPage = () => {
           // Use lastMessageId for efficient polling
           const lastMessageId = messages.length > 0 ? messages[messages.length - 1]._id : 'none';
           
-          const response = await fetch(`/api/chats/${activeChat._id}/messages/poll?lastMessageId=${lastMessageId}`);
-          
-          if (!response.ok) {
-            throw new Error(`Error polling messages: ${response.status}`);
-          }
-          
-          const data = await response.json();
+          // Use axiosInstance for consistent error handling and authentication
+          const response = await axiosInstance.get(`/api/chats/${activeChat._id}/messages/poll?lastMessageId=${lastMessageId}`);
           
           // Only fetch messages if there are actually new ones
-          if (data.hasNewMessages) {
+          if (response.data && response.data.hasNewMessages) {
             await fetchMessages(activeChat._id);
             // Only update newMessageReceived if it's not already true
             // to avoid unnecessary state updates and re-renders
@@ -316,7 +312,7 @@ const ChatPage = () => {
       clearInterval(newPollInterval);
       setPollingIntervalId(null);
     };
-  }, [activeChat, chatNotFound, messagesLoading, messages, newMessageReceived, errorCount, sendingMessage]);
+  }, [activeChat, chatNotFound, messagesLoading, messages, newMessageReceived, errorCount, sendingMessage, fetchMessages]);
   
   // Update the useEffect for handling scroll behavior - optimize to reduce rerenders
   useEffect(() => {
@@ -474,6 +470,7 @@ const ChatPage = () => {
       <ChatInput 
         onSendMessage={handleSendMessage}
         disabled={!activeChat || sendingMessage || messagesLoading}
+        chatId={activeChat._id}
       />
     );
   }, [activeChat, handleSendMessage, sendingMessage, messagesLoading]);
@@ -552,7 +549,7 @@ const ChatPage = () => {
   const sidebarComponent = useMemo(() => (
     <div className={`w-full md:w-80 bg-white border-r border-gray-200 ${chatId ? 'hidden md:block' : 'block'}`}>
       <ChatSidebar 
-        onCreateChat={handleCreateChat} 
+        onCreateChat={() => setShowCreateModal(true)} 
         onSelectChat={handleChatSelect}
       />
     </div>

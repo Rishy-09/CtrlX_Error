@@ -76,15 +76,15 @@ export const SIDE_MENU_USER_DATA = [
 
 export const PRIORITY_DATA = [
     {
-        label: "Low",
+        label: "Low Priority",
         value: "Low",
     },
     {
-        label: "Medium",
+        label: "Medium Priority",
         value: "Medium",
     },
     {
-        label: "High",
+        label: "High Priority",
         value: "High",
     }
 ]
