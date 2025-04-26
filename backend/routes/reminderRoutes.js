@@ -1,11 +1,11 @@
-import express from 'express';
-import { protect } from '../middlewares/authmiddleware.js';
+import express from "express";
+import { protect } from "../middlewares/authMiddleware.js";
 import {
   createReminder,
   getUserReminders,
   markReminderAsRead,
-  deleteReminder
-} from '../controllers/reminderController.js';
+  deleteReminder,
+} from "../controllers/reminderController.js";
 
 const router = express.Router();
 

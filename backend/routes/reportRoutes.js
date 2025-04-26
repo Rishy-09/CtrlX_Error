@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, adminOnly } from '../middlewares/authmiddleware.js';
+import { protect, adminOnly } from '../middlewares/authMiddleware.js';
 import { exportTasksReport, exportUsersReport } from '../controllers/reportController.js';
 
 const router = express.Router();
