@@ -14,7 +14,7 @@
 
 CtrlX is a role-based bug tracking system designed for developers, testers, and project managers to report, assign, and resolve bugs collaboratively. The project supports real-time tracking, email notifications, PDF/CSV export, file uploads, and an interactive dashboard.
 
-> 📍 Live Demo: [Ctrl_X-Error](https://ctrl-x-error.vercel.app/https://ctrl-x-error.vercel.app/)
+> 📍 Live Demo: [Ctrl_X-Error](https://ctrl-x-error.vercel.app/)
 >
 > 🎨 Figma Design: [Figma UI Design](https://www.figma.com/design/wF8zt2Kh5jmG3qMGbCKIPv/Smriti?node-id=0-1&p=f&t=KvNotVyqUWyESyER-0)
 
