@@ -1,6 +1,5 @@
 import React from 'react';
 import { SpeedInsights } from "@vercel/speed-insights/react"
-import { SpeedInsights } from "@vercel/speed-insights/react"
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useContext } from 'react';
 import Dashboard from "./pages/Admin/Dashboard.jsx";
