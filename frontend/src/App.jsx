@@ -1,5 +1,4 @@
 import React from 'react';
-import { SpeedInsights } from "@vercel/speed-insights/react"
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useContext } from 'react';
 import Dashboard from "./pages/Admin/Dashboard.jsx";
@@ -48,8 +47,6 @@ const App = () => {
       <ChatProvider>
         <div>
           <Router>
-          <Analytics />
-          <SpeedInsights/>
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login/>} />
