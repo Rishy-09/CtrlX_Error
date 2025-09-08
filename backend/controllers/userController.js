@@ -1,132 +1,78 @@
-import e from 'express';
-import Task from '../models/Task.js';
+import Bug from '../models/Bug.js';
 import User from '../models/User.js';
 
-// @desc Get all users
+// @desc Get all users (Admin only)
 // @route GET /api/users/
 // @access Private (Admin)
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find().select('-password'); // Exclude password from the user object
-        
-        // Add tasks count to each user
-        const usersWithTasksCount = await Promise.all(
-                users.map(async (user) => {
-                    const pendingTasks = await Task.countDocuments(
-                        {
-                            assignedTo: user._id, 
-                            status: "Pending",
-                        }
-                    );
-                    const inProgressTasks = await Task.countDocuments(
-                        {
-                            assignedTo: user._id, 
-                            status: "In Progress",
-                        }
-                    );
-                    const completedTasks = await Task.countDocuments(
-                        {
-                            assignedTo: user._id, 
-                            status: "Completed",
-                        }
-                    );
+        const users = await User.find().select('-password'); // Get all users (any role) // Exclude password from the user object
 
-                    return {
-                        ...user._doc, // Include all existing user data
-                        pendingTasks,
-                        inProgressTasks,
-                        completedTasks,
-                    };        
+        const usersWithBugStats = await Promise.all(
+            users.map(async (user) => {
+                let assignedBugs = 0;
+                let createdBugs = 0;
+                let openBugs = 0;
+                let inProgressBugs = 0;
+                let closedBugs = 0;
+
+                if (user.role === 'developer') {
+                    assignedBugs = await Bug.countDocuments({ assignedTo: user._id });
+                    openBugs = await Bug.countDocuments({ assignedTo: user._id, status: 'Open' });
+                    inProgressBugs = await Bug.countDocuments({ assignedTo: user._id, status: 'In Progress' });
+                    closedBugs = await Bug.countDocuments({ assignedTo: user._id, status: 'Closed' });
                 }
-            )
+
+                if (user.role === 'tester') {
+                    createdBugs = await Bug.countDocuments({ createdBy: user._id });
+                }
+
+                return {
+                    ...user._doc, // Include all existing user data
+                    assignedBugs,
+                    createdBugs,
+                    openBugs,
+                    inProgressBugs,
+                    closedBugs,
+                };
+            })
         );
-        res.json(usersWithTasksCount);
-    }
-    catch (error) {
+
+        res.json(usersWithBugStats);
+    } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
-// @desc Get user by ID
+// @desc Get a single user by ID
 // @route GET /api/users/:id
 // @access Private
 const getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('-password'); // Exclude password from the user object
+        const user = await User.findById(req.params.id).select('-password');
         if (!user) {
-            return res.status(404).json(
-                { 
-                    message: 'User not found' 
-                }
-            );
+            return res.status(404).json({ message: 'User not found' });
         }
         res.json(user);
-    }
-    catch (error) {
-        res.status(500).json(
-            { 
-                message: 'Server error', 
-                error: error.message 
-            }
-        );
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
-// @desc    Update user notification settings
-// @route   PUT /api/users/:id/notification-settings
-// @access  Private
-const updateNotificationSettings = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    
-    // Check if user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found"
-      });
+// @desc Get all developers
+// @route GET /api/users/developers
+// @access Private (Admin, Tester)
+const getDevelopers = async (req, res) => {
+    try {
+        const developers = await User.find({ role: 'developer' }).select('-password');
+        res.json(developers);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
-    
-    // Check authorization - user can only update their own settings or admin can update any
-    if (req.user._id.toString() !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({
-        message: "Not authorized to update these settings"
-      });
-    }
-    
-    // Get settings from request body
-    const { settings } = req.body;
-    
-    if (!settings) {
-      return res.status(400).json({
-        message: "Settings data is required"
-      });
-    }
-    
-    // Update user notification settings
-    user.notificationSettings = {
-      ...user.notificationSettings,
-      ...settings
-    };
-    
-    // Save updated user
-    await user.save();
-    
-    res.json({
-      message: "Notification settings updated successfully",
-      settings: user.notificationSettings
-    });
-  } catch (error) {
-    console.error("Error updating notification settings:", error);
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message
-    });
-  }
 };
 
-export { 
-    getUsers, 
+export {
+    getUsers,
     getUserById,
-    updateNotificationSettings
+    getDevelopers
 };

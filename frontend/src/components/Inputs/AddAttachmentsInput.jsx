@@ -2,13 +2,13 @@ import React, {useState} from 'react'
 import {HiMiniPlus, HiOutlineTrash} from 'react-icons/hi2'
 import {LuPaperclip} from 'react-icons/lu'
 
-const AddAttachmentsInput = ({attachments, setAttachments}) => {
+const AddAttachmentsInput = ({label, attachments = [], onChange}) => {
   const [option, setOption] = useState('')
   
   // Function to handle adding an option
   const handleAddOption = () => {
     if (option.trim() !== '') {
-      setAttachments([...attachments, option.trim()]);
+      onChange([...attachments, option.trim()]);
       setOption("");
     }
   };
@@ -16,19 +16,25 @@ const AddAttachmentsInput = ({attachments, setAttachments}) => {
   // Function to handle deleting an option
   const handleDeleteOption = (index) => {
     const updatedArr = attachments.filter((_, idx) => idx !== index);
-    setAttachments(updatedArr);
+    onChange(updatedArr);
   };
 
   return (
     <div>
-      {attachments.map((item, index) => (
+      {label && (
+        <label className="text-xs font-medium text-slate-600 block mb-1">
+          {label}
+        </label>
+      )}
+      
+      {attachments && attachments.map((item, index) => (
         <div
           key={index}
           className="flex justify-between bg-gray-50 border border-gray-100 px-3 py-2 rounded-md mb-3 mt-2"
         >
-          <div className='flex-1 flex items-center gap-3 border border-gray-100'>
+          <div className='flex-1 flex items-center gap-3'>
             <LuPaperclip className='text-gray-400' />
-            <p className='text-xs text-gray-800'>{item}</p>
+            <p className='text-xs text-black'>{item}</p>
           </div>
 
           <button
@@ -36,6 +42,7 @@ const AddAttachmentsInput = ({attachments, setAttachments}) => {
             onClick={() => {
               handleDeleteOption(index)
             }}
+            type="button"
           >
             <HiOutlineTrash className='text-lg text-red-500' />
           </button>
@@ -50,11 +57,22 @@ const AddAttachmentsInput = ({attachments, setAttachments}) => {
             placeholder="Add File Link"
             value={option}
             onChange={({target}) => setOption(target.value)}
-            className='w-full text-[13px] text-gray-800 outline-none bg-white py-2'
+            className='w-full text-[13px] text-black outline-none bg-white py-2'
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddOption();
+              }
+            }}
           />
         </div>
-        <button className='card-btn text-nowrap' onClick={handleAddOption}>
-          <HiMiniPlus className='text-lg'/>Add
+
+        <button
+          className='card-btn text-nowrap'
+          onClick={handleAddOption}
+          type="button"
+        >
+          <HiMiniPlus className='text-lg' /> Add
         </button>
       </div>
     </div>

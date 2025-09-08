@@ -1,135 +1,133 @@
-import Task from '../models/Task.js';
+import Bug from '../models/Bug.js';
 import User from '../models/User.js';
 import exceljs from 'exceljs';
 
-// @desc Export all tasks as an Excel file
-// @route GET /api/reports/export/tasks
+// @desc Export all bugs as an Excel file
+// @route GET /api/reports/export/bugs
 // @access Private (Admin)
-const exportTasksReport = async (req, res) => {
+const exportBugsReport = async (req, res) => {
     try {
-        const tasks = await Task.find().populate('assignedTo', 'name email');
+        const bugs = await Bug.find().populate('assignedTo', 'name email').sort({ createdAt: -1 });
         const workbook = new exceljs.Workbook();
-        const worksheet = workbook.addWorksheet('Tasks Report');
+        const worksheet = workbook.addWorksheet('Bugs Report');
 
         // Define columns
         worksheet.columns = [
-            { header: 'Task ID', key: '_id', width: 30 },
+            { header: 'Bug ID', key: '_id', width: 30 },
             { header: 'Title', key: 'title', width: 30 },
             { header: 'Description', key: 'description', width: 50 },
             { header: 'Priority', key: 'priority', width: 15 },
+            { header: 'Severity', key: 'severity', width: 15 },
             { header: 'Status', key: 'status', width: 20 },
+            { header: 'Created At', key: 'createdAt', width: 20 },
             { header: 'Due Date', key: 'dueDate', width: 20 },
             { header: 'Assigned To', key: 'assignedTo', width: 30 },
         ];
 
-        // Add rows to the worksheet
-        tasks.forEach(task => {
-                const assignedTo = task.assignedTo.map(user => user.name).join(', '); // Join names with commas
-        
-                worksheet.addRow(
-                    {
-                        _id: task._id,
-                        title: task.title,
-                        description: task.description,
-                        priority: task.priority,
-                        status: task.status,
-                        dueDate: task.dueDate.toISOString().split('T')[0], // Format date to YYYY-MM-DD
-                        assignedTo: assignedTo || "Unassigned", 
-                    }
-                );
-            }
-        );
+        // Add rows
+        bugs.forEach(bug => {
+            const assignedToNames = (bug.assignedTo && bug.assignedTo.length)
+                ? bug.assignedTo.map(user => user.name).join(', ')
+                : 'Unassigned';
 
-        // Set response headers for Excel file download
+            worksheet.addRow({
+                _id: bug._id.toString(),
+                title: bug.title,
+                description: bug.description || 'N/A',
+                priority: bug.priority,
+                severity: bug.severity,
+                status: bug.status,
+                createdAt: bug.createdAt.toISOString().split('T')[0],
+                dueDate: bug.dueDate ? bug.dueDate.toISOString().split('T')[0] : 'N/A',
+                assignedTo: assignedToNames,
+            });
+        });
+
+        // Response headers
         res.setHeader(
-            'Content-Type', 
+            'Content-Type',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         );
         res.setHeader(
-            'Content-Disposition', 
-            'attachment; filename="tasks_report_${Date.now()}.xlsx"' // filename=tasks_report_${Date.now()}.xlsx
-        ); 
-
-        return workbook.xlsx.write(res).then(() => 
-            {
-                res.end();
-            }
+            'Content-Disposition',
+            `attachment; filename="bugs_report_${Date.now()}.xlsx"`
         );
-        // Write to response
+
         await workbook.xlsx.write(res);
         res.end();
+    } catch (error) {
+        res.status(500).json({
+            message: "Error exporting bugs",
+            error: error.message
+        });
     }
-    catch (error) {
-        res.status(500).json(
-            { 
-                message: "Error exporting tasks", 
-                error: error.message 
-            }
-        );
-    }
-}
+};
 
-// @desc Export user-task report as an Excel file
-// @route GET /api/reports/export/users
+// @desc Export user-bug report as an Excel file
+// @route GET /api/reports/export/bugs
 // @access Private (Admin)
 const exportUsersReport = async (req, res) => {
     try {
-        const users = await User.find().select("name email _id").lean() // Select only necessary fields
-        const userTasks = await Task.find().populate(
-            'assignedTo', 
+        const users = await User.find().select("name email role _id").lean() // Select only necessary fields
+        const userBugs = await Bug.find().populate(
+            'assignedTo createdBy', 
             'name email _id'
         );
-        const userTaskMap = {};
+        const userBugMap = {};
         // Add rows to the worksheet
-        users.forEach((user) => 
-            {
-                userTaskMap[user._id] = {
-                    name: user.name,
-                    email: user.email,
-                    taskCount: 0,
-                    pendingTasks: 0,
-                    inProgressTasks: 0,
-                    completedTasks: 0,
-                };
-            }
-        );
+        users.forEach((user) => {
+            userBugMap[user._id] = {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                createdBugs: 0,
+                assignedBugs: 0,
+                openBugs: 0,
+                inProgressBugs: 0,
+                closedBugs: 0,
+            };
+        });
 
-        userTasks.forEach((task) =>
-            {
-                if (task.assignedTo) {
-                    task.assignedTo.forEach((assignedUser) => 
-                        {
-                            if (userTaskMap[assignedUser._id]) {
-                                userTaskMap[assignedUser._id].taskCount += 1;
-                                if (task.status === 'Pending') {
-                                    userTaskMap[assignedUser._id].pendingTasks += 1;
-                                } 
-                                else if (task.status === 'In Progress') {
-                                    userTaskMap[assignedUser._id].inProgressTasks += 1;
-                                } 
-                                else if (task.status === 'Completed') {
-                                    userTaskMap[assignedUser._id].completedTasks += 1;
-                                }
-                            }
-                        }
-                    );
-                }
+        // Loop through all bugs
+        userBugs.forEach(bug => {
+            // Created by (tester)
+            if (bug.createdBy && userBugMap[bug.createdBy._id]) {
+                userBugMap[bug.createdBy._id].createdBugs += 1;
             }
-        );
+
+            // Assigned to (developers - can be multiple)
+            if (Array.isArray(bug.assignedTo)) {
+                bug.assignedTo.forEach(dev => {
+                    if (userBugMap[dev._id]) {
+                        userBugMap[dev._id].assignedBugs += 1;
+
+                        if (bug.status === 'Open') {
+                            userBugMap[dev._id].openBugs += 1;
+                        } else if (bug.status === 'In Progress') {
+                            userBugMap[dev._id].inProgressBugs += 1;
+                        } else if (bug.status === 'Closed') {
+                            userBugMap[dev._id].closedBugs += 1;
+                        }
+                    }
+                });
+            }
+        });
 
         const workbook = new exceljs.Workbook();
-        const worksheet = workbook.addWorksheet('User Task Report');
+        const worksheet = workbook.addWorksheet('User Bug Report');
         
         worksheet.columns = [
             { header: 'User Name', key: 'name', width: 30 },
-            { header: "Email", key: 'email', width: 40 },
-            { header: 'Total Assigned Tasks', key: 'taskCount', width: 20 },
-            { header: 'Pending Tasks', key: 'pendingTasks', width: 20 },
-            { header: 'In Progress Tasks', key: 'inProgressTasks', width: 20 },
-            { header: 'Completed Tasks', key: 'completedTasks', width: 20 },
+            { header: 'Email', key: 'email', width: 40 },
+            { header: 'Role', key: 'role', width: 20 },
+            { header: 'Created Bugs', key: 'createdBugs', width: 20 },
+            { header: 'Assigned Bugs', key: 'assignedBugs', width: 20 },
+            { header: 'Open Bugs', key: 'openBugs', width: 20 },
+            { header: 'In Progress Bugs', key: 'inProgressBugs', width: 20 },
+            { header: 'Resolved Bugs', key: 'closedBugs', width: 20 },
         ];
 
-        Object.values(userTaskMap).forEach((user) =>{
+        Object.values(userBugMap).forEach((user) =>{
             worksheet.addRow(user);
         });
 
@@ -140,7 +138,7 @@ const exportUsersReport = async (req, res) => {
         );
         res.setHeader(
             'Content-Disposition', 
-            'attachment; filename="users_repor.xlsx"' // filename=users_report_${Date.now()}.xlsx
+            `attachment; filename="users_report_${Date.now()}.xlsx"` // filename=users_report_${Date.now()}.xlsx
         ); 
 
         return workbook.xlsx.write(res).then(() => 
@@ -148,11 +146,10 @@ const exportUsersReport = async (req, res) => {
                 res.end();
             }
         );
-    }
-    catch (error) {
+    } catch (error) {
         res.status(500).json(
             { 
-                message: "Error exporting tasks", 
+                message: "Error exporting bugs", 
                 error: error.message 
             }
         );
@@ -160,7 +157,7 @@ const exportUsersReport = async (req, res) => {
 };
 
 export { 
-    exportTasksReport, 
+    exportBugsReport, 
     exportUsersReport
 };
 

@@ -14,7 +14,10 @@ const uploadImage = async (imageFile) => {
             },
         });
 
-        return response.data; // Assuming the API returns the image URL in the response
+        // Return the response data with consistent property naming
+        return {
+            imageUrl: response.data.imageURL
+        };
     }
     catch (error) {
         console.error("Error uploading image:", error);

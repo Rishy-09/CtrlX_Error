@@ -1,131 +1,50 @@
 import Bug from "../models/Bug.js";
-import Attachment from "../models/Attachment.js";
-import Comment from "../models/Comment.js";
-import User from "../models/User.js";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// @desc    Get all bugs (Admin/Developer: all, Tester: only reported bugs)
+import asyncHandler from "express-async-handler";
+// @desc    Get all bugs (Admin: all, User: only assigned bugs)
 // @route   GET /api/bugs/
 // @access  Private
 const getBugs = async (req, res) => {
   try {
-    const { status, priority, severity, assignedTo, reporter, environment, bugType } = req.query;
-
     let filter = {};
 
-    // Apply filters if provided
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (severity) filter.severity = severity;
-    if (environment) filter.environment = environment;
-    if (bugType) filter.bugType = bugType;
-    if (assignedTo) filter.assignedTo = assignedTo;
-    if (reporter) filter.reporter = reporter;
-
-    let bugs;
-
-    // Role-based access control
-    if (req.user.role === "admin" || req.user.role === "developer") {
-      // Admins and developers can see all bugs
-      if (req.user.role === "developer" && !assignedTo) {
-        // If developer and no assignedTo filter, show assigned to them by default
-        filter.assignedTo = req.user._id;
-      }
-      
-      bugs = await Bug.find(filter)
-        .populate("reporter", "name email profileImageURL")
-        .populate("assignedTo", "name email profileImageURL")
-        .sort({ createdAt: -1 });
+    // If userId is provided in params, filter by that user
+    if (req.params.userId) {
+      filter = { createdBy: req.params.userId };
     } else {
-      // Testers can only see bugs they reported or are assigned to
-      bugs = await Bug.find({
-        ...filter,
-        $or: [
-          { reporter: req.user._id },
-          { assignedTo: req.user._id }
-        ]
-      })
-        .populate("reporter", "name email profileImageURL")
-        .populate("assignedTo", "name email profileImageURL")
-        .sort({ createdAt: -1 });
+      // Otherwise use role-based filtering
+      filter =
+        req.user.role === "admin"
+          ? {}
+          : req.user.role === "tester"
+          ? { createdBy: req.user._id }
+          : { assignedTo: req.user._id };
     }
 
-    // Add completed todoChecklist count to each bug
-    bugs = await Promise.all(
-      bugs.map(async (bug) => {
-        const completedCount = bug.todoChecklist.filter(
-          (item) => item.completed
-        ).length;
-        return {
-          ...bug._doc,
-          completedCount: completedCount,
-        };
-      })
+    const bugs = await Bug.find(filter).populate(
+      "assignedTo",
+      "name email profileImageURL"
     );
 
     // Status summary counts
-    const allBugs = await Bug.countDocuments(
-      req.user.role === "admin" || req.user.role === "developer" 
-        ? {}
-        : { $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] }
-    );
+    const allBugs = await Bug.countDocuments(filter);
 
-    const openBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Open",
-      ...(req.user.role === "tester" && { 
-        $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] 
-      }),
-    });
-
+    const openBugs = await Bug.countDocuments({ ...filter, status: "Open" });
     const inProgressBugs = await Bug.countDocuments({
       ...filter,
       status: "In Progress",
-      ...(req.user.role === "tester" && { 
-        $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] 
-      }),
     });
-
-    const testingBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Testing",
-      ...(req.user.role === "tester" && { 
-        $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] 
-      }),
-    });
-
     const closedBugs = await Bug.countDocuments({
       ...filter,
       status: "Closed",
-      ...(req.user.role === "tester" && { 
-        $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] 
-      }),
     });
 
-    const reopenedBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Reopened",
-      ...(req.user.role === "tester" && { 
-        $or: [{ reporter: req.user._id }, { assignedTo: req.user._id }] 
-      }),
-    });
-
-    res.json({
+    res.status(200).json({
       bugs,
       statusSummary: {
         all: allBugs,
-        openBugs,
-        inProgressBugs,
-        testingBugs,
-        closedBugs,
-        reopenedBugs,
+        open: openBugs,
+        inProgress: inProgressBugs,
+        closed: closedBugs,
       },
     });
   } catch (error) {
@@ -142,28 +61,30 @@ const getBugs = async (req, res) => {
 const getBugById = async (req, res) => {
   try {
     const bug = await Bug.findById(req.params.id)
-      .populate("reporter", "name email profileImageURL")
       .populate("assignedTo", "name email profileImageURL")
-      .populate("comments");
+      .populate("createdBy", "name email");
 
     if (!bug) {
       return res.status(404).json({
         message: "Bug not found",
       });
     }
-    
-    // Check if user is authorized to view this bug
-    if (req.user.role === "tester" && 
-        !bug.reporter.equals(req.user._id) && 
-        !bug.assignedTo.some(user => user._id.equals(req.user._id))) {
-      return res.status(403).json({
-        message: "Not authorized to view this bug",
-      });
+
+    // Check if user is authorized to view the bug
+    const isAuthorized =
+      req.user.role === "admin" ||
+      (req.user.role === "tester" &&
+        bug.createdBy._id.toString() === req.user._id.toString()) ||
+      (req.user.role === "developer" &&
+        bug.assignedTo.some(
+          (dev) => dev._id.toString() === req.user._id.toString()
+        ));
+
+    if (!isAuthorized) {
+      return res.status(403).json({ message: "Not authorized" });
     }
-    
-    res.json({
-      bug,
-    });
+
+    res.status(200).json(bug);
   } catch (error) {
     res.status(500).json({
       message: "Server Error",
@@ -172,70 +93,119 @@ const getBugById = async (req, res) => {
   }
 };
 
-// @desc    Create a new bug
+// @desc    Create a new bug (Admin only)
 // @route   POST /api/bugs/
-// @access  Private
+// @access  Private (Tester)
 const createBug = async (req, res) => {
   try {
-    const {
+    let {
       title,
       description,
-      priority,
       severity,
-      bugType,
-      environment,
-      version,
-      stepsToReproduce,
+      module,
       assignedTo,
-      todoChecklist,
+      checklist,
+      priority,
+      dueDate,
+      attachments,
     } = req.body;
 
-    // Create bug
-    const bug = await Bug.create({
-      title,
-      description,
-      priority: priority || "Medium",
-      severity: severity || "Minor",
-      bugType: bugType || "Functional",
-      environment: environment || "Development",
-      version: version || "1.0",
-      stepsToReproduce: stepsToReproduce || "",
-      reporter: req.user._id,
-      assignedTo: assignedTo || [],
-      todoChecklist: todoChecklist || [],
-    });
-
-    // Handle file attachments
-    if (req.files && req.files.length > 0) {
-      const attachmentPromises = req.files.map(async (file) => {
-        const attachment = await Attachment.create({
-          filename: file.filename,
-          originalFilename: file.originalname,
-          path: file.path,
-          mimetype: file.mimetype,
-          size: file.size,
-          bug: bug._id,
-          uploadedBy: req.user._id
-        });
-        
-        return attachment._id;
+    // Validate user role
+    if (req.user.role !== "tester") {
+      return res.status(403).json({
+        message: "Only testers can create bugs",
+        error: "Unauthorized role",
       });
-      
-      const attachmentIds = await Promise.all(attachmentPromises);
-      
-      // Update bug with attachment IDs
-      bug.attachments = attachmentIds;
-      await bug.save();
     }
 
+    // Validate required fields
+    if (!title || !description) {
+      return res.status(400).json({
+        message: "Title and description are required",
+        error: "Missing required fields",
+      });
+    }
+
+    // Validate priority and severity
+    if (!["Low", "Medium", "High"].includes(priority)) {
+      return res.status(400).json({
+        message: "Invalid priority value",
+        error: "Invalid priority",
+      });
+    }
+
+    if (!["Minor", "Major", "Critical"].includes(severity)) {
+      return res.status(400).json({
+        message: "Invalid severity value",
+        error: "Invalid severity",
+      });
+    }
+
+    // Validate assignedTo
+    if (!Array.isArray(assignedTo) || assignedTo.length === 0) {
+      return res.status(400).json({
+        message: "At least one developer must be assigned",
+        error: "Invalid assignedTo",
+      });
+    }
+
+    // Format checklist items
+    const formattedChecklist = Array.isArray(checklist)
+      ? checklist.map((item) => ({
+          text: typeof item === "string" ? item.trim() : item.text?.trim(),
+          completed: false,
+          completedBy: null,
+          completedAt: null,
+        }))
+      : [];
+
+    // Format attachments
+    const formattedAttachments = Array.isArray(attachments)
+      ? attachments
+          .filter((attachment) => attachment && typeof attachment === "string")
+          .map((a) => a.trim())
+      : [];
+
+    // Create bug with formatted data
+    const bug = await Bug.create({
+      title: title.trim(),
+      description: description.trim(),
+      severity,
+      module: module?.trim() || "",
+      createdBy: req.user._id,
+      assignedTo,
+      checklist: formattedChecklist,
+      priority,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      attachments: formattedAttachments,
+      status: "Open",
+    });
+
     res.status(201).json({
-      message: "Bug reported successfully",
+      message: "Bug created successfully",
       bug,
     });
   } catch (error) {
+    console.error("Error creating bug:", error);
+
+    // Handle specific MongoDB errors
+    if (error.name === "ValidationError") {
+      const validationErrors = Object.values(error.errors).map((err) => ({
+        field: err.path,
+        message: err.message,
+      }));
+
+      return res.status(400).json({
+        message: "Validation Error",
+        error: "Validation failed",
+        details: validationErrors,
+      });
+    }
+
     res.status(500).json({
       message: "Server Error",
       error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 };
@@ -246,70 +216,35 @@ const createBug = async (req, res) => {
 const updateBug = async (req, res) => {
   try {
     const bug = await Bug.findById(req.params.id);
-
     if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
+      return res.status(404).json({ message: "Bug not found" });
     }
 
-    // Check if user is authorized to update this bug
-    if (req.user.role === "tester" && 
-        !bug.reporter.equals(req.user._id) && 
-        !bug.assignedTo.some(userId => userId.toString() === req.user._id.toString())) {
-      return res.status(403).json({
-        message: "Not authorized to update this bug",
-      });
+    // Check if user is authorized to update the bug
+    const isAuthorized =
+      req.user.role === "admin" ||
+      (req.user.role === "tester" &&
+        bug.createdBy.toString() === req.user._id.toString()) ||
+      (req.user.role === "developer" && bug.assignedTo.includes(req.user._id));
+
+    if (!isAuthorized) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this bug" });
     }
 
-    // Update fields
-    const fieldsToUpdate = [
-      "title", "description", "priority", "severity", 
-      "bugType", "environment", "version", "stepsToReproduce",
-      "todoChecklist", "dueDate"
-    ];
-    
-    fieldsToUpdate.forEach(field => {
-      if (req.body[field] !== undefined) {
-        bug[field] = req.body[field];
-      }
-    });
+    // Set lastUpdatedBy
+    req.body.lastUpdatedBy = req.user._id;
 
-    // Update assignees if provided and user is admin or developer
-    if (req.body.assignedTo && (req.user.role === "admin" || req.user.role === "developer")) {
-      if (!Array.isArray(req.body.assignedTo)) {
-        return res.status(400).json({
-          message: "assignedTo must be an array of user IDs",
-        });
-      }
-      bug.assignedTo = req.body.assignedTo;
-    }
+    // Update the bug
+    const updatedBug = await Bug.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("assignedTo", "name email profileImageURL")
+      .populate("createdBy", "name email profileImageURL");
 
-    // Handle new file attachments
-    if (req.files && req.files.length > 0) {
-      const attachmentPromises = req.files.map(async (file) => {
-        const attachment = await Attachment.create({
-          filename: file.filename,
-          originalFilename: file.originalname,
-          path: file.path,
-          mimetype: file.mimetype,
-          size: file.size,
-          bug: bug._id,
-          uploadedBy: req.user._id
-        });
-        
-        return attachment._id;
-      });
-      
-      const attachmentIds = await Promise.all(attachmentPromises);
-      
-      // Add new attachments to existing ones
-      bug.attachments = [...bug.attachments, ...attachmentIds];
-    }
-
-    const updatedBug = await bug.save();
-    
-    res.json({
+    res.status(200).json({
       message: "Bug updated successfully",
       bug: updatedBug,
     });
@@ -321,32 +256,30 @@ const updateBug = async (req, res) => {
   }
 };
 
-// @desc    Delete a bug (Admin only)
+// @desc    Delete a bug
 // @route   DELETE /api/bugs/:id
-// @access  Private (Admin)
+// @access  Private
 const deleteBug = async (req, res) => {
   try {
     const bug = await Bug.findById(req.params.id);
     if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
+      return res.status(404).json({ message: "Bug not found" });
     }
-    
-    // Delete related attachments
-    if (bug.attachments && bug.attachments.length > 0) {
-      await Attachment.deleteMany({ _id: { $in: bug.attachments } });
+
+    // Check if user is authorized to delete the bug
+    const isAuthorized =
+      req.user.role === "admin" ||
+      (req.user.role === "tester" &&
+        bug.createdBy.toString() === req.user._id.toString());
+
+    if (!isAuthorized) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this bug" });
     }
-    
-    // Delete related comments
-    await Comment.deleteMany({ bug: bug._id });
-    
-    // Delete the bug
+
     await bug.deleteOne();
-    
-    res.json({
-      message: "Bug deleted successfully",
-    });
+    res.status(200).json({ message: "Bug deleted successfully" });
   } catch (error) {
     res.status(500).json({
       message: "Server Error",
@@ -358,80 +291,63 @@ const deleteBug = async (req, res) => {
 // @desc    Update bug status
 // @route   PUT /api/bugs/:id/status
 // @access  Private
+
+// Transition	Who Can Do It
+// "Open" → "In Progress"	Developer (assigned)
+// "In Progress" → "Closed"	Developer (if checklist complete)
+// "Closed" → any other	Admin only
 const updateBugStatus = async (req, res) => {
   try {
     const bug = await Bug.findById(req.params.id);
+    if (!bug) return res.status(404).json({ message: "Bug not found" });
 
-    if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
+    const isAdmin = req.user.role === "admin";
+    const isDeveloper =
+      req.user.role === "developer" &&
+      bug.assignedTo?.some(
+        (userId) => userId.toString() === req.user._id.toString()
+      );
+
+    if (!isAdmin && !isDeveloper) {
+      return res.status(403).json({ message: "Not authorized" });
     }
 
-    // Check if user is authorized to update this bug
-    const isAssigned = bug.assignedTo.some(
-      (userId) => userId.toString() === req.user._id.toString()
-    );
+    const newStatus = req.body.status;
+    if (!newStatus)
+      return res.status(400).json({ message: "Status is required" });
 
-    if (req.user.role === "tester" && !bug.reporter.equals(req.user._id) && !isAssigned) {
+    // Only developers can move to "In Progress"
+    if (newStatus === "In Progress" && !isDeveloper) {
       return res.status(403).json({
-        message: "Not authorized to update this bug status",
+        message: "Only assigned developers can move bug to In Progress.",
       });
     }
 
-    // Role-based status update restrictions
-    const { status } = req.body;
-    
-    if (!status) {
-      return res.status(400).json({
-        message: "Status is required",
-      });
+    // Only admins can reopen a Closed bug
+    if (bug.status === "Closed" && newStatus !== "Closed" && !isAdmin) {
+      return res
+        .status(403)
+        .json({ message: "Only admin can reopen a closed bug." });
     }
-    
-    // Restrictions based on roles and current status
-    if (req.user.role === "tester") {
-      // Testers can only set status to "Open", "Testing", or "Reopened"
-      if (!["Open", "Testing", "Reopened"].includes(status)) {
-        return res.status(403).json({
-          message: "Testers can only set status to Open, Testing, or Reopened",
-        });
-      }
-      
-      // Can only reopen if current status is Closed
-      if (status === "Reopened" && bug.status !== "Closed") {
+
+    // Prevent closing unless checklist is complete
+    if (newStatus === "Closed") {
+      const allItemsCompleted = (bug.checklist || []).every(
+        (item) => item.completed
+      );
+      if (!allItemsCompleted) {
         return res.status(400).json({
-          message: "Can only reopen bugs that are currently Closed",
-        });
-      }
-    } else if (req.user.role === "developer") {
-      // Developers can't set status to Open or Reopened directly
-      if (["Open", "Reopened"].includes(status) && !["Open", "Reopened"].includes(bug.status)) {
-        return res.status(403).json({
-          message: "Developers cannot set bugs to Open or Reopened status",
+          message: "Cannot close bug unless all checklist items are completed.",
         });
       }
     }
 
-    bug.status = status;
-
-    // If status is "Closed", mark all todos as completed
-    if (status === "Closed") {
-      bug.todoChecklist.forEach((item) => {
-        item.completed = true;
-      });
-      bug.progress = 100;
-    }
-
+    bug.status = newStatus;
     await bug.save();
-    
-    // Populate the updated bug
-    const updatedBug = await Bug.findById(req.params.id)
-      .populate("reporter", "name email profileImageURL")
-      .populate("assignedTo", "name email profileImageURL");
-    
+
     res.json({
       message: "Bug status updated",
-      bug: updatedBug,
+      bug,
     });
   } catch (error) {
     res.status(500).json({
@@ -441,12 +357,11 @@ const updateBugStatus = async (req, res) => {
   }
 };
 
-// @desc    Update bug todoChecklist
-// @route   PUT /api/bugs/:id/todo
+// @desc    Update bug checklist
+// @route   PUT /api/bugs/:id/checklist
 // @access  Private
 const updateBugChecklist = async (req, res) => {
   try {
-    const { todoChecklist } = req.body;
     const bug = await Bug.findById(req.params.id);
 
     if (!bug) {
@@ -455,43 +370,50 @@ const updateBugChecklist = async (req, res) => {
       });
     }
 
-    // Check if user has permission to update the checklist
-    const isAssigned = bug.assignedTo.some(
-      userId => userId.toString() === req.user._id.toString()
-    );
-    
-    const isReporter = bug.reporter.toString() === req.user._id.toString();
-    
-    if (req.user.role === "tester" && !isReporter && !isAssigned) {
-      return res.status(403).json({
-        message: "Not authorized to update checklist",
-      });
+    const isAssigned =
+      Array.isArray(bug.assignedTo) &&
+      bug.assignedTo.some(
+        (userId) => userId.toString() === req.user._id.toString()
+      );
+
+    if (!isAssigned) {
+      res.status(403);
+      throw new Error("You are not assigned to this bug");
     }
 
-    bug.todoChecklist = todoChecklist; // Replace with updated checklist
+    const isAdmin = req.user.role === "admin";
+    const isDeveloper = req.user.role === "developer" && isAssigned;
+
+    if (!isAdmin && !isDeveloper)
+      return res.status(403).json({ message: "Not authorized" });
+
+    const { checklist } = req.body;
+    bug.checklist = checklist; // Replace with updated checklist
 
     // Auto-update progress based on checklist completion
-    const completedCount = todoChecklist.filter(
-      (item) => item.completed
-    ).length;
-    const totalItems = bug.todoChecklist.length;
-    bug.progress =
-      totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+    const completedCount = checklist.filter((item) => item.done).length;
 
-    // Auto-update status based on progress
-    if (bug.status !== "Closed" && bug.status !== "Reopened") {
-      if (bug.progress === 100) {
-        bug.status = "Testing"; // All todos complete, ready for testing
-      } else if (bug.progress > 0) {
-        bug.status = "In Progress"; // Some progress made
+    // Auto-close only if all checklist items are completed, and bug isn't already in a final state
+    const allCompleted = checklist.every((item) => item.done);
+    const finalStates = ["Closed", "Rejected"];
+
+    if (!finalStates.includes(bug.status)) {
+      if (allCompleted) {
+        bug.status = "Closed";
+        bug.closedByChecklist = true;
+      } else if (completedCount > 0) {
+        bug.status = "In Progress";
+      } else {
+        bug.status = "Open";
       }
     }
 
     await bug.save();
 
-    const updatedBug = await Bug.findById(req.params.id)
-      .populate("reporter", "name email profileImageURL")
-      .populate("assignedTo", "name email profileImageURL");
+    const updatedBug = await Bug.findById(req.params.id).populate(
+      "assignedTo",
+      "name email profileImageUrl"
+    );
 
     res.json({
       message: "Bug checklist updated",
@@ -505,72 +427,20 @@ const updateBugChecklist = async (req, res) => {
   }
 };
 
-// @desc    Dashboard data (Admin/Developer)
-// @route   GET /api/bugs/dashboard-data
-// @access  Private
-const getDashboardData = async (req, res) => {
+// @desc    Get admin dashboard data
+// @route   GET /api/bugs/admin-dashboard
+// @access  Private (Admin)
+const getAdminDashboardData = async (req, res) => {
   try {
-    let filter = {};
-    
-    // For developers, only show bugs assigned to them
-    if (req.user.role === "developer") {
-      filter.assignedTo = req.user._id;
-    } else if (req.user.role === "tester") {
-      // For testers, only show bugs they reported or are assigned to
-      filter.$or = [
-        { reporter: req.user._id },
-        { assignedTo: req.user._id }
-      ];
-    }
-    
-    // Fetch statistics
-    const totalBugs = await Bug.countDocuments(filter);
-    
-    const openBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Open",
-    });
-    
-    const inProgressBugs = await Bug.countDocuments({
-      ...filter,
-      status: "In Progress",
-    });
-    
-    const testingBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Testing",
-    });
-    
-    const closedBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Closed",
-    });
-    
-    const reopenedBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Reopened",
-    });
-    
-    const criticalBugs = await Bug.countDocuments({
-      ...filter,
-      severity: "Critical",
-      status: { $ne: "Closed" },
-    });
-    
-    const overdueBugs = await Bug.countDocuments({
-      ...filter,
-      dueDate: { 
-        $lt: new Date()
-      },
-      status: {
-        $ne: "Closed" 
-      },
-    });
+    // Get all bugs count
+    const totalBugs = await Bug.countDocuments({});
+    const openBugs = await Bug.countDocuments({ status: "Open" });
+    const inProgressBugs = await Bug.countDocuments({ status: "In Progress" });
+    const closedBugs = await Bug.countDocuments({ status: "Closed" });
 
-    // Status distribution
-    const statusList = ["Open", "In Progress", "Testing", "Closed", "Reopened"];
-    const statusDistributionRaw = await Bug.aggregate([
-      { $match: filter },
+    // Bug Distribution by Status
+    const bugStatuses = ["Open", "In Progress", "Closed"];
+    const bugDistributionRaw = await Bug.aggregate([
       {
         $group: {
           _id: "$status",
@@ -579,38 +449,17 @@ const getDashboardData = async (req, res) => {
       },
     ]);
 
-    const statusDistribution = statusList.reduce((acc, status) => {
-      const formattedKey = status.replace(/\s+/g, ""); // Remove spaces for response keys
-      acc[formattedKey] = statusDistributionRaw.find(
-        (item) => item._id === status
-      )?.count || 0; // Default to 0 if not found
+    const bugDistribution = bugStatuses.reduce((acc, status) => {
+      const formattedKey = status.replace(/\s+/g, "");
+      acc[formattedKey] =
+        bugDistributionRaw.find((item) => item._id === status)?.count || 0;
       return acc;
     }, {});
-    statusDistribution["All"] = totalBugs;
+    bugDistribution["All"] = totalBugs;
 
-    // Priority distribution
-    const priorityList = ["Low", "Medium", "High", "Critical"];
-    const priorityDistributionRaw = await Bug.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: "$priority",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-    
-    const priorityDistribution = priorityList.reduce((acc, priority) => {
-      acc[priority] = priorityDistributionRaw.find(
-        (item) => item._id === priority
-      )?.count || 0; // Default to 0 if not found
-      return acc; 
-    }, {});
-
-    // Severity distribution
-    const severityList = ["Minor", "Major", "Critical", "Blocker"];
-    const severityDistributionRaw = await Bug.aggregate([
-      { $match: filter },
+    // Bug Distribution by Severity
+    const bugSeverities = ["Low", "Medium", "High"];
+    const bugSeverityLevelsRaw = await Bug.aggregate([
       {
         $group: {
           _id: "$severity",
@@ -618,78 +467,38 @@ const getDashboardData = async (req, res) => {
         },
       },
     ]);
-    
-    const severityDistribution = severityList.reduce((acc, severity) => {
-      acc[severity] = severityDistributionRaw.find(
-        (item) => item._id === severity
-      )?.count || 0;
-      return acc; 
+
+    const bugSeverityLevels = bugSeverities.reduce((acc, severity) => {
+      acc[severity] =
+        bugSeverityLevelsRaw.find((item) => item._id === severity)?.count || 0;
+      return acc;
     }, {});
 
-    // Bug type distribution
-    const typeList = ["Functional", "UI/UX", "Performance", "Security", "Compatibility", "Other"];
-    const typeDistributionRaw = await Bug.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: "$bugType",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-    
-    const typeDistribution = typeList.reduce((acc, type) => {
-      acc[type] = typeDistributionRaw.find(
-        (item) => item._id === type
-      )?.count || 0;
-      return acc; 
-    }, {});
-
-    // Recent bugs
-    const recentBugs = await Bug.find(filter)
+    // Get recent 10 bugs
+    const recentBugs = await Bug.find({})
+      .populate("assignedTo", "name email profileImageURL")
+      .populate("createdBy", "name email profileImageURL")
       .sort({ createdAt: -1 })
       .limit(10)
-      .select("title status priority severity bugType reporter assignedTo createdAt")
-      .populate("reporter", "name")
-      .populate("assignedTo", "name");
-    
-    // Most active bugs (most comments)
-    const activeBugs = await Bug.aggregate([
-      { $match: filter },
-      {
-        $project: {
-          title: 1,
-          status: 1,
-          priority: 1,
-          severity: 1,
-          commentCount: { $size: "$comments" }
-        }
-      },
-      { $sort: { commentCount: -1 } },
-      { $limit: 5 }
-    ]);
+      .select(
+        "title status priority severity module assignedTo createdBy createdAt"
+      );
 
     res.status(200).json({
       statistics: {
         totalBugs,
         openBugs,
         inProgressBugs,
-        testingBugs,
         closedBugs,
-        reopenedBugs,
-        criticalBugs,
-        overdueBugs,
       },
-      charts: {   
-        statusDistribution,
-        priorityDistribution,
-        severityDistribution,
-        typeDistribution,
+      charts: {
+        bugDistribution,
+        bugSeverityLevels,
       },
       recentBugs,
-      activeBugs,
     });
   } catch (error) {
+    console.error("Error in getAdminDashboardData:", error);
     res.status(500).json({
       message: "Server Error",
       error: error.message,
@@ -697,58 +506,28 @@ const getDashboardData = async (req, res) => {
   }
 };
 
-// @desc    User dashboard data
-// @route   GET /api/bugs/user-dashboard-data
-// @access  Private
-const getUserDashboardData = async (req, res) => {
+// @desc    Get tester dashboard data
+// @route   GET /api/bugs/tester-dashboard
+// @access  Private (Tester)
+const getTesterDashboardData = async (req, res) => {
   try {
-    const userId = req.user._id;
-    
-    // Create filter based on role
-    let filter = {};
-    
-    if (req.user.role === "developer") {
-      filter.assignedTo = userId;
-    } else if (req.user.role === "tester") {
-      filter.$or = [
-        { reporter: userId },
-        { assignedTo: userId }
-      ];
-    } else {
-      // Admin sees all bugs by default
-    }
+    const filter = { createdBy: req.user._id };
 
-    // Fetch statistics
+    // Get user's bugs count
     const totalBugs = await Bug.countDocuments(filter);
-    
-    const openBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Open",
-    });
-    
+    const openBugs = await Bug.countDocuments({ ...filter, status: "Open" });
     const inProgressBugs = await Bug.countDocuments({
       ...filter,
       status: "In Progress",
     });
-    
-    const testingBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Testing",
-    });
-    
     const closedBugs = await Bug.countDocuments({
       ...filter,
       status: "Closed",
     });
-    
-    const reopenedBugs = await Bug.countDocuments({
-      ...filter,
-      status: "Reopened",
-    });
 
-    // Status distribution
-    const statusList = ["Open", "In Progress", "Testing", "Closed", "Reopened"];
-    const statusDistributionRaw = await Bug.aggregate([
+    // Bug Distribution by Status
+    const bugStatuses = ["Open", "In Progress", "Closed"];
+    const bugDistributionRaw = await Bug.aggregate([
       { $match: filter },
       {
         $group: {
@@ -758,18 +537,74 @@ const getUserDashboardData = async (req, res) => {
       },
     ]);
 
-    const statusDistribution = statusList.reduce((acc, status) => {
+    const bugDistribution = bugStatuses.reduce((acc, status) => {
       const formattedKey = status.replace(/\s+/g, "");
-      acc[formattedKey] = statusDistributionRaw.find(
-        (item) => item._id === status
-      )?.count || 0;
+      acc[formattedKey] =
+        bugDistributionRaw.find((item) => item._id === status)?.count || 0;
       return acc;
     }, {});
-    statusDistribution["All"] = totalBugs;
 
-    // Priority distribution
-    const priorityList = ["Low", "Medium", "High", "Critical"];
-    const priorityDistributionRaw = await Bug.aggregate([
+    res.status(200).json({
+      stats: {
+        totalBugs,
+        openBugs,
+        inProgressBugs,
+        closedBugs,
+      },
+      charts: {
+        bugDistribution,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getTesterDashboardData:", error);
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get developer dashboard data
+// @route   GET /api/bugs/developer-dashboard
+// @access  Private (Developer)
+const getDeveloperDashboardData = async (req, res) => {
+  try {
+    const filter = { assignedTo: req.user._id };
+
+    // Get assigned bugs count
+    const totalBugs = await Bug.countDocuments(filter);
+    const openBugs = await Bug.countDocuments({ ...filter, status: "Open" });
+    const inProgressBugs = await Bug.countDocuments({
+      ...filter,
+      status: "In Progress",
+    });
+    const closedBugs = await Bug.countDocuments({
+      ...filter,
+      status: "Closed",
+    });
+
+    // Bug Distribution by Status
+    const bugStatuses = ["Open", "In Progress", "Closed"];
+    const bugDistributionRaw = await Bug.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const bugDistribution = bugStatuses.reduce((acc, status) => {
+      const formattedKey = status.replace(/\s+/g, "");
+      acc[formattedKey] =
+        bugDistributionRaw.find((item) => item._id === status)?.count || 0;
+      return acc;
+    }, {});
+
+    // Bug Distribution by Priority
+    const bugPriorities = ["Low", "Medium", "High"];
+    const bugPriorityLevelsRaw = await Bug.aggregate([
       { $match: filter },
       {
         $group: {
@@ -778,34 +613,121 @@ const getUserDashboardData = async (req, res) => {
         },
       },
     ]);
-    
-    const priorityDistribution = priorityList.reduce((acc, priority) => {
-      acc[priority] = priorityDistributionRaw.find(
-        (item) => item._id === priority
-      )?.count || 0;
+
+    const bugPriorityLevels = bugPriorities.reduce((acc, priority) => {
+      acc[priority] =
+        bugPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
       return acc;
     }, {});
-    
-    // Recent bugs
+
+    // Get recent assigned bugs
     const recentBugs = await Bug.find(filter)
-      .sort({ createdAt: -1 })
+      .populate("createdBy", "name email profileImageURL")
+      .populate("assignedTo", "name email profileImageURL")
+      .sort({ updatedAt: -1 })
       .limit(10)
-      .select("title status priority severity bugType reporter assignedTo createdAt")
-      .populate("reporter", "name")
-      .populate("assignedTo", "name");
-    
+      .select(
+        "title status priority severity module createdBy assignedTo createdAt updatedAt"
+      );
+
     res.status(200).json({
       statistics: {
         totalBugs,
         openBugs,
         inProgressBugs,
-        testingBugs,
         closedBugs,
-        reopenedBugs,
       },
       charts: {
-        statusDistribution,
-        priorityDistribution,
+        bugDistribution,
+        bugPriorityLevels,
+      },
+      recentBugs,
+    });
+  } catch (error) {
+    console.error("Error in getDeveloperDashboardData:", error);
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Dashboard data (User-specific)
+// @route   GET /api/bugs/user-dashboard-data
+// @access  Private
+const getUserDashboardData = async (req, res) => {
+  try {
+    let filter = {};
+    if (req.user.role === "tester") {
+      filter = { createdBy: req.user._id };
+    } else if (req.user.role === "developer") {
+      filter = { assignedTo: req.user._id };
+    }
+    const totalBugs = await Bug.countDocuments(filter);
+    const openBugs = await Bug.countDocuments({ ...filter, status: "Open" });
+    const closedBugs = await Bug.countDocuments({
+      ...filter,
+      status: "Closed",
+    });
+    // res.status(200).json({ totalBugs, openBugs, closedBugs });
+
+    // Bug Distribution by Status
+    const bugStatuses = ["Open", "In Progress", "Closed"];
+
+    const bugDistributionRaw = await Bug.aggregate([
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const bugDistribution = bugStatuses.reduce((acc, status) => {
+      const formattedKey = status.replace(/\s+/g, "");
+      acc[formattedKey] =
+        bugDistributionRaw.find((item) => item._id === status)?.count || 0; // Default to 0 if not found
+      return acc;
+    }, {});
+    bugDistribution["All"] = totalBugs;
+
+    // Bug Distribution by Priority
+    const bugPriorities = ["Low", "Medium", "High"];
+    const bugPriorityLevelsRaw = await Bug.aggregate([
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$priority",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const bugPriorityLevels = bugPriorities.reduce((acc, priority) => {
+      acc[priority] =
+        bugPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
+      return acc;
+    }, {});
+
+    // Fetch recent 10 bugs for the user
+    const recentBugs = await Bug.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select("title status priority dueDate createdAt");
+
+    res.status(200).json({
+      statistics: {
+        totalBugs,
+        openBugs,
+        closedBugs,
+      },
+      charts: {
+        bugDistribution,
+        bugPriorityLevels,
       },
       recentBugs,
     });
@@ -817,86 +739,53 @@ const getUserDashboardData = async (req, res) => {
   }
 };
 
-// @desc    Assign bug
-// @route   PUT /api/bugs/:id/assign
-// @access  Private (Admin/Developer)
-const assignBug = async (req, res) => {
-  try {
-    const { assignedTo } = req.body;
-    
-    if (!assignedTo || !Array.isArray(assignedTo)) {
-      return res.status(400).json({
-        message: "assignedTo must be an array of user IDs",
-      });
-    }
-    
-    const bug = await Bug.findById(req.params.id);
-    
-    if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
-    }
-    
-    // Only admin or developers (who are already assigned) can assign bugs
-    if (req.user.role === "tester" || 
-        (req.user.role === "developer" && 
-         !bug.assignedTo.some(id => id.toString() === req.user._id.toString()))) {
-      return res.status(403).json({
-        message: "Not authorized to assign this bug",
-      });
-    }
-    
-    bug.assignedTo = assignedTo;
-    
-    // If a bug is being assigned and it's 'Open', automatically change to 'In Progress'
-    if (bug.status === "Open" && assignedTo.length > 0) {
-      bug.status = "In Progress";
-    }
-    
-    await bug.save();
-    
-    const updatedBug = await Bug.findById(req.params.id)
-      .populate("reporter", "name email profileImageURL")
-      .populate("assignedTo", "name email profileImageURL");
-    
-    res.json({
-      message: "Bug assignment updated",
-      bug: updatedBug,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-};
-
-// @desc    Get bug attachments
-// @route   GET /api/bugs/:id/attachments
+// @desc    Get all bugs that the user has permission to view
+// @route   GET /api/bugs/all-viewable
 // @access  Private
-const getBugAttachments = async (req, res) => {
+const getAllViewableBugs = async (req, res) => {
   try {
-    const bug = await Bug.findById(req.params.id)
-      .populate({
-        path: "attachments",
-        select: "filename originalFilename mimetype size uploadedBy createdAt",
-        populate: {
-          path: "uploadedBy",
-          select: "name"
-        }
-      });
-    
-    if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
+    let filter = {};
+
+    // Role-based filtering
+    if (req.user.role === "admin") {
+      // Admins can see all bugs
+      filter = {};
+    } else if (req.user.role === "tester") {
+      // Testers can see bugs they created
+      filter = { createdBy: req.user._id };
+    } else if (req.user.role === "developer") {
+      // Developers can see bugs assigned to them
+      filter = { assignedTo: req.user._id };
     }
-    
-    res.json({
-      attachments: bug.attachments || [],
+
+    const bugs = await Bug.find(filter)
+      .populate("assignedTo", "name email profileImageURL")
+      .populate("createdBy", "name email profileImageURL")
+      .sort({ updatedAt: -1 }); // Sort by last updated time
+
+    // Status summary counts
+    const allBugs = await Bug.countDocuments(filter);
+    const openBugs = await Bug.countDocuments({ ...filter, status: "Open" });
+    const inProgressBugs = await Bug.countDocuments({
+      ...filter,
+      status: "In Progress",
+    });
+    const closedBugs = await Bug.countDocuments({
+      ...filter,
+      status: "Closed",
+    });
+
+    res.status(200).json({
+      bugs,
+      statusSummary: {
+        all: allBugs,
+        open: openBugs,
+        inProgress: inProgressBugs,
+        closed: closedBugs,
+      },
     });
   } catch (error) {
+    console.error("Error in getAllViewableBugs:", error);
     res.status(500).json({
       message: "Server Error",
       error: error.message,
@@ -904,101 +793,24 @@ const getBugAttachments = async (req, res) => {
   }
 };
 
-// @desc    List bugs for a specific project
-// @route   GET /api/bugs/project/:id/errors
-// @access  Private (Tester, Admin)
-const listBugsForProject = async (req, res) => {
+// @desc    Get bugs assigned to the developer
+// @route   GET /api/bugs/assigned
+// @access  Private (Developer)
+const getAssignedBugs = async (req, res) => {
   try {
-    const projectId = req.params.id;
-    
-    // Find bugs associated with the specified project
-    const bugs = await Bug.find({ project: projectId })
-      .populate("reporter", "name email profileImageURL")
+    // Find bugs where the developer is in the assignedTo array
+    const bugs = await Bug.find({
+      assignedTo: req.user._id,
+      isDeleted: { $ne: true }, // Only get non-deleted bugs
+    })
+      .populate("createdBy", "name email profileImageURL")
       .populate("assignedTo", "name email profileImageURL")
       .sort({ createdAt: -1 });
-    
-    res.json({
-      bugs,
-      count: bugs.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-};
 
-// @desc    Assign a bug to a developer
-// @route   POST /api/bugs/project/:id/assign
-// @access  Private (Admin only)
-const assignBugToDeveloper = async (req, res) => {
-  try {
-    const { bugId, developerId } = req.body;
-    
-    if (!bugId || !developerId) {
-      return res.status(400).json({
-        message: "Bug ID and developer ID are required",
-      });
-    }
-    
-    const bug = await Bug.findById(bugId);
-    
-    if (!bug) {
-      return res.status(404).json({
-        message: "Bug not found",
-      });
-    }
-    
-    // Add developer to assignedTo array if not already there
-    if (!bug.assignedTo.includes(developerId)) {
-      bug.assignedTo.push(developerId);
-    }
-    
-    // If a bug is being assigned and it's 'Open', automatically change to 'In Progress'
-    if (bug.status === "Open") {
-      bug.status = "In Progress";
-    }
-    
-    await bug.save();
-    
-    const updatedBug = await Bug.findById(bugId)
-      .populate("reporter", "name email profileImageURL")
-      .populate("assignedTo", "name email profileImageURL");
-    
-    res.json({
-      message: "Bug assigned to developer successfully",
-      bug: updatedBug,
-    });
+    res.status(200).json(bugs);
   } catch (error) {
     res.status(500).json({
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-};
-
-// @desc    List bugs assigned to developer for fixing
-// @route   GET /api/bugs/bug-fixes
-// @access  Private (Developer only)
-const listBugFixes = async (req, res) => {
-  try {
-    // Find bugs assigned to current developer that are in progress
-    const bugs = await Bug.find({ 
-      assignedTo: req.user._id,
-      status: { $in: ["In Progress", "Testing", "Reopened"] }
-    })
-      .populate("reporter", "name email profileImageURL")
-      .populate("assignedTo", "name email profileImageURL")
-      .sort({ priority: -1, createdAt: -1 });
-    
-    res.json({
-      bugs,
-      count: bugs.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server Error",
+      message: "Error fetching assigned bugs",
       error: error.message,
     });
   }
@@ -1012,11 +824,10 @@ export {
   deleteBug,
   updateBugStatus,
   updateBugChecklist,
-  getDashboardData,
+  getAdminDashboardData,
   getUserDashboardData,
-  assignBug,
-  getBugAttachments,
-  listBugsForProject,
-  assignBugToDeveloper,
-  listBugFixes
-}; 
+  getTesterDashboardData,
+  getDeveloperDashboardData,
+  getAllViewableBugs,
+  getAssignedBugs,
+};

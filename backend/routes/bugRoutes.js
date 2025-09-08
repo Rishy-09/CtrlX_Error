@@ -1,66 +1,55 @@
-import express from "express";
-import { protect, restrictTo, authorizeRoles, adminOnly } from "../middlewares/authMiddleware.js";
-import { 
-  getBugs, 
-  getBugById, 
-  createBug, 
-  updateBug, 
-  deleteBug, 
-  updateBugStatus, 
-  updateBugChecklist, 
-  getDashboardData,
-  getUserDashboardData,
-  assignBug,
-  getBugAttachments,
-  listBugsForProject,
-  assignBugToDeveloper,
-  listBugFixes
-} from "../controllers/bugController.js";
-import uploadMiddleware from "../middlewares/uploadMiddleware.js";
-import multer from "multer";
+import express from 'express';
+import {
+  protect,
+  adminOnly,
+  testerOnly,
+  developerOnly,
+} from '../middlewares/authmiddleware.js';
 
-// Configure multer for memory storage
-const upload = multer({ storage: multer.memoryStorage() });
+import {
+  getBugs,
+  getBugById,
+  createBug,
+  updateBug,
+  deleteBug,
+  updateBugStatus,
+  updateBugChecklist,
+  getAdminDashboardData,
+  getTesterDashboardData,
+  getDeveloperDashboardData,
+  getAllViewableBugs,
+  getAssignedBugs
+} from '../controllers/bugController.js';
 
 const router = express.Router();
 
-// Public routes (none for bugs - all require authentication)
+// DASHBOARD ROUTES
+router.get("/admin-dashboard", protect, adminOnly, getAdminDashboardData);
+router.get("/tester-dashboard", protect, testerOnly, getTesterDashboardData);
+router.get("/developer-dashboard", protect, developerOnly, getDeveloperDashboardData);
 
-// Protected routes (require authentication)
-router.use(protect);
+// BUG ROUTES
+router.get("/", protect, getBugs); // Admin sees all, testers see own, developers see assigned
+router.get("/all-viewable", protect, getAllViewableBugs); // Get all bugs that the user has permission to view
+router.get("/user/:userId", protect, getBugs); // Add this line for getting bugs by user ID
+router.get("/assigned", protect, developerOnly, getAssignedBugs); // Get bugs assigned to the developer
+router.get("/:id", protect, getBugById); // Bug details
 
-// Get dashboard data for authenticated user
-router.get("/dashboard/user", getUserDashboardData);
+router.post("/", protect, testerOnly, createBug); // Only testers can report bugs
 
-// Routes for admins and developers
-router.use("/dashboard", restrictTo("admin", "developer"));
-router.get("/dashboard", getDashboardData);
+router.put("/:id", protect, updateBug); // All roles can update limited fields
 
-// Project specific bug routes with role-based access
-router.get('/project/:id/errors', protect, authorizeRoles('tester', 'admin'), listBugsForProject);
-router.post('/project/:id/assign', protect, authorizeRoles('admin'), assignBugToDeveloper);
-router.get('/bug-fixes', protect, authorizeRoles('developer'), listBugFixes);
+router.delete("/:id", protect, adminOnly, deleteBug); // Only admins can delete bugs
 
-// Bug CRUD operations
-router.route("/")
-  .get(getBugs)
-  .post(uploadMiddleware.array("attachments", 5), createBug);
+router.put("/:id/status", protect, developerOnly, updateBugStatus); // Developers update bug status
 
-router.route("/:id")
-  .get(getBugById)
-  .put(uploadMiddleware.array("attachments", 5), updateBug)
-  .delete(restrictTo("admin"), deleteBug);
+router.put("/:id/checklist", protect, developerOnly, updateBugChecklist); // Developers update checklist
 
-// Bug status management
-router.put("/:id/status", updateBugStatus);
+export default router;
 
-// Bug checklist management
-router.put("/:id/todo", updateBugChecklist);
 
-// Bug assignment - restricted to admins and developers
-router.put("/:id/assign", restrictTo("admin", "developer"), assignBug);
-
-// Get bug attachments
-router.get("/:id/attachments", getBugAttachments);
-
-export default router; 
+// Dashboards are role-specific.
+// Only testers can create bugs.
+// Only developers can change status or checklist.
+// Admins have full delete access and dashboard view.
+// General GET and PUT routes are protected but accessible according to context/role in your controller.

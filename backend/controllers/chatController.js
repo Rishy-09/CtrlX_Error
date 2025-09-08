@@ -1,690 +1,451 @@
-import Chat from "../models/Chat.js";
-import Message from "../models/Message.js";
-import User from "../models/User.js";
-import Bug from "../models/Bug.js";
-import Attachment from "../models/Attachment.js";
-import axios from "axios";
-import dotenv from "dotenv";
-import asyncHandler from "express-async-handler";
-import mongoose from "mongoose";
+import Chat from '../models/Chat.js';
+import Message from '../models/Message.js';
+import User from '../models/User.js';
 import aiService from '../services/aiService.js';
+import mongoose from 'mongoose';
 
-dotenv.config();
+const MESSAGES_PER_PAGE = 50;
 
-// @desc    Create a new chat
-// @route   POST /api/chats
-// @access  Private
-const createChat = asyncHandler(async (req, res) => {
-  const { name, description, chatType, participants, associatedBug, aiAssistant } = req.body;
-
-  // Validate required fields
-  if (!name || !name.trim()) {
-    res.status(400);
-    throw new Error("Chat name is required");
-  }
-
-  // Validate chat type
-  if (!["public", "team", "private", "ai_assistant"].includes(chatType)) {
-    res.status(400);
-    throw new Error("Invalid chat type");
-  }
-
-  // For private chats, ensure at least one other participant
-  if (chatType === "private" && (!participants || participants.length === 0)) {
-    res.status(400);
-    throw new Error("Private chats require at least one other participant");
-  }
-
-  // If associated with a bug, verify bug exists
-  if (associatedBug) {
-    const bugExists = await Bug.findById(associatedBug);
-    if (!bugExists) {
-      res.status(404);
-      throw new Error("Associated bug not found");
-    }
-  }
-
-  // Validate AI assistant settings if provided
-  if (aiAssistant && typeof aiAssistant !== 'object') {
-    res.status(400);
-    throw new Error("Invalid AI assistant configuration");
-  }
-
-  // Prepare participants
-  // For public chats, always include creator
-  // For other types, include creator and specified participants
-  let chatParticipants = [];
-  if (chatType === "public") {
-    chatParticipants = [req.user._id];
-  } else {
-    chatParticipants = [...new Set([req.user._id, ...(participants || [])])]; // Ensure unique participants
-  }
-
-  // Create chat
-  const chat = await Chat.create({
-    name,
-    description: description || "",
-    chatType,
-    participants: chatParticipants,
-    admins: [req.user._id], // Creator is admin by default
-    associatedBug: associatedBug || null,
-    aiAssistant: aiAssistant || { enabled: false }
-  });
-
-  // Populate user info
-  const populatedChat = await Chat.findById(chat._id)
-    .populate("participants", "name email profileImageURL")
-    .populate("admins", "name email profileImageURL")
-    .populate("associatedBug", "title status");
-
-  res.status(201).json(populatedChat);
-});
-
-// @desc    Get all chats for logged in user
-// @route   GET /api/chats
-// @access  Private
-const getChats = asyncHandler(async (req, res) => {
-  const { type } = req.query;
-
-  let filter = {};
-  
-  // If type is public, get all public chats
-  if (type === "public") {
-    filter = { chatType: "public" };
-  } 
-  // If type is specified but not public, filter by type and user participation
-  else if (type && ["team", "private", "ai_assistant"].includes(type)) {
-    filter = {
-      participants: req.user._id,
-      chatType: type
-    };
-  } 
-  // If no type specified, get all user's chats plus all public chats
-  else {
-    filter = {
-      $or: [
-        { participants: req.user._id },
-        { chatType: "public" }
-      ]
-    };
-  }
-
-  const chats = await Chat.find(filter)
-    .populate("participants", "name email profileImageURL")
-    .populate("admins", "name email profileImageURL")
-    .populate("associatedBug", "title status")
-    .sort({ updatedAt: -1 });
-
-  // For each chat, get the last message and unread count
-  const chatsWithMetadata = await Promise.all(chats.map(async (chat) => {
-    const lastMessage = await Message.findOne({ chat: chat._id, isDeleted: false })
-      .sort({ createdAt: -1 })
-      .populate("sender", "name profileImageURL");
-
-    const unreadCount = await Message.countDocuments({
-      chat: chat._id,
-      "readBy.user": { $ne: req.user._id },
-      sender: { $ne: req.user._id },
-      isDeleted: false
-    });
-
-    return {
-      ...chat._doc,
-      lastMessage: lastMessage || null,
-      unreadCount
-    };
-  }));
-
-  res.json(chatsWithMetadata);
-});
-
-// @desc    Get single chat by id
-// @route   GET /api/chats/:id
-// @access  Private
-const getChatById = asyncHandler(async (req, res) => {
-  // Validate ObjectId format first to prevent 500 errors
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    res.status(404);
-    throw new Error("Chat not found - Invalid ID format");
-  }
-
-  const chat = await Chat.findById(req.params.id)
-    .populate("participants", "name email profileImageURL")
-    .populate("admins", "name email profileImageURL")
-    .populate("associatedBug", "title status")
-    .populate({
-      path: "lastMessage",
-      populate: {
-        path: "sender",
-        select: "name email profileImageURL"
-      }
-    });
-
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-
-  // Allow access if chat is public OR user is a participant
-  const isPublic = chat.chatType === "public";
-  const isParticipant = chat.participants.some(p => 
-    p._id && p._id.toString() === req.user._id.toString()
-  );
-  
-  if (!isPublic && !isParticipant) {
-    res.status(403);
-    throw new Error("You don't have permission to access this chat");
-  }
-
-  // Mark all messages as read by this user
-  await Message.updateMany(
-    { 
-      chat: chat._id, 
-      "readBy.user": { $ne: req.user._id },
-      sender: { $ne: req.user._id }
-    },
-    { 
-      $addToSet: { 
-        readBy: { 
-          user: req.user._id, 
-          readAt: new Date() 
-        } 
-      } 
-    }
-  );
-
-  res.json(chat);
-});
-
-// @desc    Update chat
-// @route   PUT /api/chats/:id
-// @access  Private (admin only)
-const updateChat = asyncHandler(async (req, res) => {
-  const { name, description, participants, admins, aiAssistant } = req.body;
-  
-  const chat = await Chat.findById(req.params.id);
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is an admin
-  if (!chat.admins.includes(req.user._id)) {
-    res.status(403);
-    throw new Error("Only chat admins can update chat settings");
-  }
-  
-  // Update fields
-  if (name) chat.name = name;
-  if (description !== undefined) chat.description = description;
-  if (participants) chat.participants = [...new Set(participants)]; // Ensure unique
-  if (admins) chat.admins = [...new Set(admins)]; // Ensure unique
-  if (aiAssistant) chat.aiAssistant = { ...chat.aiAssistant, ...aiAssistant };
-  
-  await chat.save();
-  
-  const updatedChat = await Chat.findById(chat._id)
-    .populate("participants", "name email profileImageURL")
-    .populate("admins", "name email profileImageURL")
-    .populate("associatedBug", "title status");
-  
-  res.json(updatedChat);
-});
-
-// @desc    Add/remove participants
-// @route   PUT /api/chats/:id/participants
-// @access  Private (admin only)
-const updateParticipants = asyncHandler(async (req, res) => {
-  const { add, remove } = req.body;
-  
-  if ((!add || !add.length) && (!remove || !remove.length)) {
-    res.status(400);
-    throw new Error("Please provide participants to add or remove");
-  }
-  
-  const chat = await Chat.findById(req.params.id);
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is an admin
-  if (!chat.admins.includes(req.user._id)) {
-    res.status(403);
-    throw new Error("Only chat admins can manage participants");
-  }
-  
-  // Add participants
-  if (add && add.length) {
-    // Verify all users exist
-    const userIds = await User.find({ _id: { $in: add } }).select("_id");
-    const validIds = userIds.map(u => u._id.toString());
-    
-    // Add valid users
-    const newParticipants = [...chat.participants];
-    validIds.forEach(id => {
-      if (!newParticipants.includes(id)) {
-        newParticipants.push(id);
-      }
-    });
-    
-    chat.participants = newParticipants;
-  }
-  
-  // Remove participants
-  if (remove && remove.length) {
-    chat.participants = chat.participants.filter(
-      p => !remove.includes(p.toString())
-    );
-    
-    // Also remove from admins if present
-    chat.admins = chat.admins.filter(
-      a => !remove.includes(a.toString())
-    );
-  }
-  
-  await chat.save();
-  
-  const updatedChat = await Chat.findById(chat._id)
-    .populate("participants", "name email profileImageURL")
-    .populate("admins", "name email profileImageURL");
-  
-  res.json(updatedChat);
-});
-
-// @desc    Delete chat
-// @route   DELETE /api/chats/:id
-// @access  Private (admin only)
-const deleteChat = asyncHandler(async (req, res) => {
-  const chat = await Chat.findById(req.params.id);
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is an admin
-  if (!chat.admins.includes(req.user._id)) {
-    res.status(403);
-    throw new Error("Only chat admins can delete the chat");
-  }
-  
-  // Delete all messages in the chat
-  await Message.deleteMany({ chat: chat._id });
-  
-  // Delete the chat
-  await chat.deleteOne();
-  
-  res.json({ message: "Chat deleted successfully" });
-});
-
-// @desc    Send a message to a chat
-// @route   POST /api/chats/:chatId/messages
-// @access  Private
-const sendMessage = asyncHandler(async (req, res) => {
-  const { content, attachments } = req.body;
-  
-  if ((!content || !content.trim()) && (!attachments || attachments.length === 0)) {
-    res.status(400);
-    throw new Error("Message must have content or attachments");
-  }
-  
-  // Validate ObjectId format first to prevent 500 errors
-  if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) {
-    res.status(404);
-    throw new Error("Chat not found - Invalid ID format");
-  }
-  
-  // Get the chat
-  const chat = await Chat.findById(req.params.chatId)
-    .populate("participants", "name email profileImageURL");
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is a participant or if it's a public chat
-  const isPublic = chat.chatType === "public";
-  const isParticipant = chat.participants.some(p => 
-    p._id && p._id.toString() === req.user._id.toString()
-  );
-  
-  if (!isPublic && !isParticipant) {
-    res.status(403);
-    throw new Error("You are not a participant in this chat");
-  }
-  
+/**
+ * Create a new chat
+ * @route POST /api/chats
+ */
+export const createChat = async (req, res) => {
   try {
-    // If non-participant sending message to public chat, add them as participant
-    if (isPublic && !isParticipant) {
-      chat.participants.push(req.user._id);
-      await chat.save();
-    }
-    
-    // Create message with trim to avoid whitespace-only messages
-    const message = await Message.create({
-      sender: req.user._id,
-      content: content ? content.trim() : "",
-      chat: req.params.chatId,
-      readBy: [{ user: req.user._id }]
-    });
-    
-    // Process attachments if any
-    if (attachments && attachments.length > 0) {
-      const savedAttachments = [];
+    const { name, type, participants, aiAssistant } = req.body;
+    const userId = req.user.id;
+
+    // Validate participants exist
+    let validParticipants = [];
+    if (participants && participants.length > 0) {
+      validParticipants = await User.find({
+        _id: { $in: participants }
+      }).select('_id');
       
-      for (const file of attachments) {
-        const attachment = await Attachment.create({
-          filename: file.filename,
-          originalname: file.originalname,
-          contentType: file.contentType,
-          size: file.size,
-          url: file.url,
-          uploader: req.user._id
-        });
-        
-        savedAttachments.push(attachment._id);
+      if (validParticipants.length !== participants.length) {
+        return res.status(400).json({ message: 'One or more participants are invalid' });
+      }
+    }
+
+    // Always include the creator
+    const participantIds = [
+      ...new Set([
+        userId,
+        ...validParticipants.map(p => p._id.toString())
+      ])
+    ];
+
+    const newChat = new Chat({
+      name,
+      type: type || 'private',
+      participants: participantIds,
+      admins: [userId],
+      aiAssistant: aiAssistant || { enabled: false }
+    });
+
+    await newChat.save();
+
+    const populatedChat = await Chat.findById(newChat._id)
+      .populate('participants', 'name email profileImageURL')
+      .populate('admins', 'name email profileImageURL')
+      .populate({
+        path: 'lastMessage',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
+        }
+      });
+
+    res.status(201).json(populatedChat);
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    res.status(500).json({ message: 'Failed to create chat' });
+  }
+};
+
+/**
+ * Get all chats for current user
+ * @route GET /api/chats
+ */
+export const getChats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const chats = await Chat.find({
+      participants: userId
+    })
+      .populate('participants', 'name email profileImageURL')
+      .populate('admins', 'name email profileImageURL')
+      .populate({
+        path: 'lastMessage',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
+        }
+      })
+      .sort({ updatedAt: -1 });
+
+    res.json(chats);
+  } catch (error) {
+    console.error('Error getting chats:', error);
+    res.status(500).json({ message: 'Failed to get chats' });
+  }
+};
+
+/**
+ * Get a specific chat by ID
+ * @route GET /api/chats/:id
+ */
+export const getChatById = async (req, res) => {
+  try {
+    const chatId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: 'Invalid chat ID' });
+    }
+
+    const chat = await Chat.findById(chatId)
+      .populate('participants', 'name email profileImageURL')
+      .populate('admins', 'name email profileImageURL')
+      .populate({
+        path: 'lastMessage',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
+        }
+      });
+
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    // Check if user is a participant
+    if (!chat.participants.some(p => p._id.toString() === userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+    }
+
+    res.json(chat);
+  } catch (error) {
+    console.error('Error getting chat:', error);
+    res.status(500).json({ message: 'Failed to get chat' });
+  }
+};
+
+/**
+ * Update a chat
+ * @route PUT /api/chats/:id
+ */
+export const updateChat = async (req, res) => {
+  try {
+    const chatId = req.params.id;
+    const userId = req.user.id;
+    const { name, participants, admins, aiAssistant } = req.body;
+
+    // Check if valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: 'Invalid chat ID' });
+    }
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    // Check if user is an admin
+    if (!chat.admins.some(admin => admin.toString() === userId)) {
+      return res.status(403).json({ message: 'Only chat admins can update chat settings' });
+    }
+
+    // Update fields if provided
+    if (name) chat.name = name;
+    
+    // Update participants if provided
+    if (participants) {
+      const validParticipants = await User.find({
+        _id: { $in: participants }
+      }).select('_id');
+      
+      if (validParticipants.length !== participants.length) {
+        return res.status(400).json({ message: 'One or more participants are invalid' });
       }
       
-      message.attachments = savedAttachments;
-      await message.save();
+      chat.participants = validParticipants.map(p => p._id);
     }
     
-    // Update chat's lastMessage and updatedAt
-    chat.lastMessage = message._id;
-    chat.updatedAt = new Date();
+    // Update admins if provided
+    if (admins) {
+      // Ensure all admins are also participants
+      const isValidAdmins = admins.every(adminId => 
+        chat.participants.some(p => p.toString() === adminId)
+      );
+      
+      if (!isValidAdmins) {
+        return res.status(400).json({ message: 'All admins must be participants' });
+      }
+      
+      chat.admins = admins;
+    }
+    
+    // Update AI assistant settings if provided
+    if (aiAssistant) {
+      chat.aiAssistant = {
+        ...chat.aiAssistant,
+        ...aiAssistant
+      };
+    }
+
     await chat.save();
-    
-    // Populate message data for response
-    const populatedMessage = await Message.findById(message._id)
-      .populate("sender", "name email profileImageURL")
+
+    const updatedChat = await Chat.findById(chatId)
+      .populate('participants', 'name email profileImageURL')
+      .populate('admins', 'name email profileImageURL')
       .populate({
-        path: "attachments",
-        select: "filename originalname contentType size url createdAt"
+        path: 'lastMessage',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
+        }
       });
+
+    res.json(updatedChat);
+  } catch (error) {
+    console.error('Error updating chat:', error);
+    res.status(500).json({ message: 'Failed to update chat' });
+  }
+};
+
+/**
+ * Delete a chat
+ * @route DELETE /api/chats/:id
+ */
+export const deleteChat = async (req, res) => {
+  try {
+    const chatId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: 'Invalid chat ID' });
+    }
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    // Check if user is an admin
+    if (!chat.admins.some(admin => admin.toString() === userId)) {
+      return res.status(403).json({ message: 'Only chat admins can delete the chat' });
+    }
+
+    // Delete all messages in the chat
+    await Message.deleteMany({ chat: chatId });
     
-    // After creating the message, check if AI assistant is enabled and generate a response
+    // Delete the chat
+    await Chat.findByIdAndDelete(chatId);
+
+    res.json({ message: 'Chat deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting chat:', error);
+    res.status(500).json({ message: 'Failed to delete chat' });
+  }
+};
+
+/**
+ * Send a message to a chat
+ * @route POST /api/chats/:id/messages
+ */
+export const sendMessage = async (req, res) => {
+  try {
+    const chatId = req.params.id;
+    const userId = req.user.id;
+    const { content, mentions, replyTo, attachments } = req.body;
+
+    // Check if valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: 'Invalid chat ID' });
+    }
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    // Check if user is a participant
+    if (!chat.participants.some(p => p.toString() === userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+    }
+
+    // Validate reply message exists if provided
+    if (replyTo && !await Message.exists({ _id: replyTo, chat: chatId })) {
+      return res.status(400).json({ message: 'Reply message not found' });
+    }
+
+    // Create new message
+    const newMessage = new Message({
+      chat: chatId,
+      sender: userId,
+      content,
+      mentions: mentions || [],
+      replyTo: replyTo || null,
+      attachments: attachments || [],
+      readBy: [{ user: userId }]
+    });
+
+    await newMessage.save();
+
+    // Update last message in chat
+    chat.lastMessage = newMessage._id;
+    await chat.save();
+
+    // Populate the message with sender info
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate('sender', 'name email profileImageURL')
+      .populate('mentions', 'name email profileImageURL')
+      .populate({
+        path: 'replyTo',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
+        }
+      });
+
+    // If AI assistant is enabled, generate a response
     if (chat.aiAssistant && chat.aiAssistant.enabled) {
       try {
-        // Get recent messages for context (limit to last 10)
-        const recentMessages = await Message.find({ chat: req.params.chatId })
+        // Get recent messages
+        const recentMessages = await Message.find({ chat: chatId })
           .sort({ createdAt: -1 })
           .limit(10)
-          .populate('sender', 'name username isAI')
-          .lean();
-        
-        // Reverse to get chronological order
-        const context = recentMessages.reverse();
-        
-        // Generate AI response using our service
-        const aiResponseText = await aiService.generateAIResponse(
-          req.params.chatId, 
-          context, 
-          chat.aiAssistant
-        );
-        
+          .populate('sender', 'name')
+          .sort({ createdAt: 1 });
+
+        // Get AI response
+        const aiResponseContent = await aiService.getAIResponse(recentMessages, chat);
+
         // Create AI message
-        const aiUser = await User.findOne({ isAI: true });
-        
-        if (!aiUser) {
-          console.error("AI user not found in database");
-          throw new Error("AI user configuration error");
-        }
-        
-        // Create the AI response message
-        const aiMessage = await Message.create({
-          chat: req.params.chatId,
-          sender: aiUser._id,
-          content: aiResponseText,
-          isAIMessage: true
+        const aiMessage = new Message({
+          chat: chatId,
+          content: aiResponseContent,
+          isAIMessage: true,
+          readBy: chat.participants.map(participant => ({
+            user: participant
+          }))
         });
-        
-        // Update chat's lastMessage
+
+        await aiMessage.save();
+
+        // Update last message
         chat.lastMessage = aiMessage._id;
         await chat.save();
-        
-      } catch (err) {
-        console.error("Error generating AI response:", err);
-        // Don't fail the whole request just because AI failed
-        // The user's message was still sent successfully
+
+        // Don't wait for this to complete
+        Message.populate(aiMessage, {
+          path: 'chat',
+          select: 'name type'
+        }).then(() => {
+          // Here you could trigger a websocket event to notify clients
+        });
+      } catch (aiError) {
+        console.error('AI response error:', aiError);
+        // Continue without AI response, just log the error
       }
     }
-    
+
     res.status(201).json(populatedMessage);
   } catch (error) {
-    console.error("Error sending message:", error);
-    res.status(500);
-    throw new Error("Failed to send message");
+    console.error('Error sending message:', error);
+    res.status(500).json({ message: 'Failed to send message' });
   }
-});
+};
 
-// @desc    Get messages from a chat
-// @route   GET /api/chats/:chatId/messages
-// @access  Private
-const getMessages = asyncHandler(async (req, res) => {
-  const { limit = 50, before = null } = req.query;
-  const parsedLimit = parseInt(limit, 10);
-  
-  // Validate ObjectId format first to prevent 500 errors
-  if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) {
-    res.status(404);
-    throw new Error("Chat not found - Invalid ID format");
-  }
-  
-  // Get the chat
-  const chat = await Chat.findById(req.params.chatId)
-    .populate("participants", "name email profileImageURL");
-  
-  if (!chat) {
-    res.status(404);
-    throw new Error("Chat not found");
-  }
-  
-  // Check if user is a participant or if it's a public chat
-  const isPublic = chat.chatType === "public";
-  const isParticipant = chat.participants.some(p => 
-    p._id && p._id.toString() === req.user._id.toString()
-  );
-  
-  if (!isPublic && !isParticipant) {
-    res.status(403);
-    throw new Error("You are not a participant in this chat");
-  }
-  
-  // Build query
-  const query = { chat: req.params.chatId, isDeleted: { $ne: true } };
-  
-  // Add before condition if provided
-  if (before) {
-    query.createdAt = { $lt: new Date(before) };
-  }
-  
+/**
+ * Get messages for a chat with pagination
+ * @route GET /api/chats/:id/messages
+ */
+export const getMessages = async (req, res) => {
   try {
-    // Get messages with pagination (newest first)
+    const chatId = req.params.id;
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const before = req.query.before; // Message ID to get messages before
+
+    // Check if valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: 'Invalid chat ID' });
+    }
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    // Check if user is a participant
+    if (!chat.participants.some(p => p.toString() === userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this chat' });
+    }
+
+    // Build query
+    let query = { chat: chatId };
+    
+    // If before parameter is provided, get messages before that one
+    if (before && mongoose.Types.ObjectId.isValid(before)) {
+      const beforeMessage = await Message.findById(before);
+      if (beforeMessage) {
+        query.createdAt = { $lt: beforeMessage.createdAt };
+      }
+    }
+
+    // Get messages with pagination
     const messages = await Message.find(query)
       .sort({ createdAt: -1 })
-      .limit(parsedLimit)
-      .populate("sender", "name email profileImageURL")
+      .skip((page - 1) * MESSAGES_PER_PAGE)
+      .limit(MESSAGES_PER_PAGE)
+      .populate('sender', 'name email profileImageURL')
+      .populate('mentions', 'name email profileImageURL')
       .populate({
-        path: "attachments",
-        select: "filename originalname contentType size url createdAt"
-      })
-      .populate("reactions.user", "name email profileImageURL");
-    
-    // Mark messages as read by this user
-    if (messages.length > 0 && (isParticipant || isPublic)) {
-      const messageIds = messages.map(message => message._id);
-      
-      await Message.updateMany(
-        { 
-          _id: { $in: messageIds },
-          "readBy.user": { $ne: req.user._id }
-        },
-        { 
-          $addToSet: { 
-            readBy: { user: req.user._id, readAt: new Date() }
-          }
+        path: 'replyTo',
+        populate: {
+          path: 'sender',
+          select: 'name profileImageURL'
         }
-      );
-    }
-    
-    res.json(messages);
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-    res.status(500);
-    throw new Error("Failed to fetch messages");
-  }
-});
+      });
 
-// @desc    Delete a message
-// @route   DELETE /api/chats/:chatId/messages/:messageId
-// @access  Private
-const deleteMessage = asyncHandler(async (req, res) => {
-  const message = await Message.findById(req.params.messageId);
-  
-  if (!message) {
-    res.status(404);
-    throw new Error("Message not found");
-  }
-  
-  // Check if message belongs to the specified chat
-  if (message.chat.toString() !== req.params.chatId) {
-    res.status(400);
-    throw new Error("Message does not belong to this chat");
-  }
-  
-  // Check if user is sender or admin
-  const chat = await Chat.findById(req.params.chatId);
-  const isAdmin = chat.admins.includes(req.user._id);
-  const isSender = message.sender.toString() === req.user._id.toString();
-  
-  if (!isAdmin && !isSender) {
-    res.status(403);
-    throw new Error("Not authorized to delete this message");
-  }
-  
-  // Soft delete
-  message.isDeleted = true;
-  message.content = "This message has been deleted";
-  await message.save();
-  
-  res.json({ message: "Message deleted successfully" });
-});
-
-// @desc    Add reaction to a message
-// @route   POST /api/messages/:messageId/reactions
-// @access  Private
-const addReaction = asyncHandler(async (req, res) => {
-  const { emoji } = req.body;
-  
-  if (!emoji) {
-    res.status(400);
-    throw new Error("Emoji is required");
-  }
-  
-  // Get the message
-  const message = await Message.findById(req.params.messageId)
-    .populate({
-      path: "chat",
-      select: "participants type"
-    });
-  
-  if (!message) {
-    res.status(404);
-    throw new Error("Message not found");
-  }
-  
-  // Check if user is a participant or if it's a public chat
-  const isParticipant = message.chat.participants.includes(req.user._id);
-  const isPublicChat = message.chat.type === 'public';
-  
-  if (!isParticipant && !isPublicChat) {
-    res.status(403);
-    throw new Error("You are not a participant in this chat");
-  }
-  
-  // Remove existing reaction from this user if any
-  await Message.updateOne(
-    { _id: message._id },
-    { $pull: { reactions: { user: req.user._id } } }
-  );
-  
-  // Add the new reaction
-  const updatedMessage = await Message.findByIdAndUpdate(
-    message._id,
-    {
-      $push: {
-        reactions: {
-          user: req.user._id,
-          emoji
-        }
+    // Mark messages as read
+    const messageIds = messages.map(m => m._id);
+    await Message.updateMany(
+      { 
+        _id: { $in: messageIds },
+        'readBy.user': { $ne: userId }
+      },
+      { 
+        $push: { readBy: { user: userId, readAt: new Date() } }
       }
-    },
-    { new: true }
-  ).populate("reactions.user", "name email profileImageURL");
-  
-  res.json(updatedMessage.reactions);
-});
+    );
 
-// @desc    Delete reaction from a message
-// @route   DELETE /api/messages/:messageId/reactions/:reactionId
-// @access  Private
-const deleteReaction = asyncHandler(async (req, res) => {
-  // Get the message
-  const message = await Message.findById(req.params.messageId)
-    .populate({
-      path: "chat",
-      select: "participants type"
+    res.json({
+      messages: messages.reverse(), // Send in chronological order
+      page,
+      hasMore: messages.length === MESSAGES_PER_PAGE
     });
-  
-  if (!message) {
-    res.status(404);
-    throw new Error("Message not found");
+  } catch (error) {
+    console.error('Error getting messages:', error);
+    res.status(500).json({ message: 'Failed to get messages' });
   }
-  
-  // Check if user is a participant or if it's a public chat
-  const isParticipant = message.chat.participants.includes(req.user._id);
-  const isPublicChat = message.chat.type === 'public';
-  
-  if (!isParticipant && !isPublicChat) {
-    res.status(403);
-    throw new Error("You are not a participant in this chat");
-  }
-  
-  // Find the reaction
-  const reaction = message.reactions.id(req.params.reactionId);
-  
-  if (!reaction) {
-    res.status(404);
-    throw new Error("Reaction not found");
-  }
-  
-  // Ensure user owns the reaction
-  if (reaction.user.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error("You can only delete your own reactions");
-  }
-  
-  // Remove the reaction
-  message.reactions.pull(req.params.reactionId);
-  await message.save();
-  
-  res.json({ message: "Reaction removed" });
-});
+};
 
-export {
+export default {
   createChat,
   getChats,
   getChatById,
   updateChat,
-  updateParticipants,
   deleteChat,
   sendMessage,
-  getMessages,
-  deleteMessage,
-  addReaction,
-  deleteReaction
+  getMessages
 }; 
