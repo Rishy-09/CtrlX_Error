@@ -120,145 +120,151 @@ CtrlX is a role-based bug tracking system designed for developers, testers, and 
 ## 🔧 Project Structure
 
 ```bash
-backend/
-    ├── config/
-        └── db.js
-    ├── controllers/
-        ├── authController.js
-        ├── bugController.js
-        ├── chatController.js
-        ├── reportController.js
-        └── userController.js
-    ├── middlewares/
-        ├── auth.js
-        ├── authmiddleware.js
-        └── uploadMiddleware.js
-    ├── models/
-        ├── Bug.js
-        ├── Chat.js
-        ├── Message.js
-        └── User.js
-    ├── routes/
-        ├── authRoutes.js
-        ├── bugRoutes.js
-        ├── chatRoutes.js
-        ├── reportRoutes.js
-        └── userRoutes.js
-    ├── services/
-        └── aiService.js
-    ├── uploads/
-        └── 1743857317797-profile.jpg
-    ├── package-lock.json
-    ├── package.json
-    └── server.js
-docs/
-    ├── FinalReport.pdf
-    ├── LiveWebsiteLink_Deployment_&_Integrations.pdf
-    ├── PreFinalReport.pdf
-    ├── Presentation.pdf
-    ├── ProjectRiskAnalysisSurvey.xlsx
-    ├── RisksAnalysisReport.pdf
-    ├── SRS.pdf
-    └── StudentFeedbackQuestionnaire_ AI_in_Software_Engineering_Projectsform_Responses.xlsx
-frontend/
-    ├── public/
-        ├── 4882066.jpg
-        ├── logo.png
-        └── vite.svg
-    ├── src/
-        ├── assets/
-            ├── images/
-                ├── Amulya.jpeg
-                ├── auth-bg.jpeg
-                ├── bug_tracking.jpg
-                ├── Naman.png
-                ├── Smriti.jpeg
-                └── Soumya.jpeg
-            └── react.svg
-        ├── components/
-            ├── Cards/
-                ├── BugCard.jsx
-                ├── InfoCard.jsx
-                └── UserCard.jsx
-            ├── Charts/
-                ├── CustomBarChart.jsx
-                ├── CustomLegend.jsx
-                ├── CustomPieChart.jsx
-                └── CustomToolTip.jsx
-            ├── chat/
-                ├── ChatInput.jsx
-                ├── ChatMessages_fixed.jsx
-                ├── ChatMessages.jsx
-                ├── ChatSettingsModal.jsx
-                ├── ChatSidebar.jsx
-                └── CreateChatModal.jsx
-            ├── Inputs/
-                ├── AddAttachmentsInput.jsx
-                ├── Input.jsx
-                ├── ProfilePhotoSelector.jsx
-                ├── SelectDropdown.jsx
-                ├── SelectUsers.jsx
-                └── ToDoListInput.jsx
-            ├── layouts/
-                ├── AuthLayout.jsx
-                ├── DashboardLayout.jsx
-                ├── Navbar.jsx
-                └── SideMenu.jsx
-            ├── AvatarGroup.jsx
-            ├── BugListTable.jsx
-            ├── BugStatusTabs.jsx
-            ├── DeleteAlert.jsx
-            ├── Modal.jsx
-            └── Progress.jsx
-        ├── context/
-            ├── ChatContext.jsx
-            └── userContext.jsx
-        ├── hooks/
-            └── useUserAuth.jsx
-        ├── pages/
-            ├── Admin/
-                ├── AdminDashboard.jsx
-                ├── CreateBug.jsx
-                ├── ManageBugs.jsx
-                ├── ManageUsers.jsx
-                └── ViewBugAdmin.jsx
-            ├── Auth/
-                ├── Login.jsx
-                └── Signup.jsx
-            ├── Developer/
-                ├── AssignedBugs.jsx
-                ├── DeveloperDashboard.jsx
-                ├── UpdateBugStatus.jsx
-                └── ViewAssignedBug.jsx
-            ├── Tester/
-                ├── AllBugs.jsx
-                ├── CreateBug.jsx
-                ├── MyBugs.jsx
-                ├── TesterDashboard.jsx
-                └── ViewBugDetails.jsx
-            ├── ChatPage.jsx
-            └── LandingPage.jsx
-        ├── routes/
-            └── PrivateRoute.jsx
-        ├── utils/
-            ├── apiPaths.js
-            ├── axiosInstance.js
-            ├── data.js
-            ├── helper.js
-            └── uploadImage.js
-        ├── App.jsx
-        ├── index.css
-        └── main.jsx
-    ├── .gitignore
-    ├── eslint.config.js
-    ├── index.html
-    ├── package-lock.json
-    ├── package.json
-    ├── README.md
-    ├── vercel.json
-    └── vite.config.js
-.gitignore
-README.md
+Directory structure:
+rishy-09-ctrlx_error/
+├── backend/
+│   ├── config/
+│   │   └── db.js
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── bugController.js
+│   │   ├── chatController.js
+│   │   ├── reportController.js
+│   │   └── userController.js
+│   ├── middlewares/
+│   │   ├── auth.js
+│   │   ├── authmiddleware.js
+│   │   └── uploadMiddleware.js
+│   ├── models/
+│   │   ├── Bug.js
+│   │   ├── Chat.js
+│   │   ├── Message.js
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── bugRoutes.js
+│   │   ├── chatRoutes.js
+│   │   ├── reportRoutes.js
+│   │   └── userRoutes.js
+│   ├── services/
+│   │   └── aiService.js
+│   ├── uploads/
+│   │   └── 1743857317797-profile.jpg
+│   ├── package-lock.json
+│   ├── package.json
+│   └── server.js
+│
+├── docs/
+│   ├── FinalReport.pdf
+│   ├── LiveWebsiteLink_Deployment_&_Integrations.pdf
+│   ├── PreFinalReport.pdf
+│   ├── Presentation.pdf
+│   ├── ProjectRiskAnalysisSurvey.xlsx
+│   ├── RisksAnalysisReport.pdf
+│   ├── SRS.pdf
+│   └── StudentFeedbackQuestionnaire_AI_in_Software_Engineering_Projectsform_Responses.xlsx
+│
+├── frontend/
+│   ├── public/
+│   │   ├── 4882066.jpg
+│   │   ├── logo.png
+│   │   └── vite.svg
+│   ├── src/
+│   │   ├── assets/
+│   │   │   ├── images/
+│   │   │   │   ├── Amulya.jpeg
+│   │   │   │   ├── auth-bg.jpeg
+│   │   │   │   ├── bug_tracking.jpg
+│   │   │   │   ├── Naman.png
+│   │   │   │   ├── Smriti.jpeg
+│   │   │   │   └── Soumya.jpeg
+│   │   │   └── react.svg
+│   │   ├── components/
+│   │   │   ├── Cards/
+│   │   │   │   ├── BugCard.jsx
+│   │   │   │   ├── InfoCard.jsx
+│   │   │   │   └── UserCard.jsx
+│   │   │   ├── Charts/
+│   │   │   │   ├── CustomBarChart.jsx
+│   │   │   │   ├── CustomLegend.jsx
+│   │   │   │   ├── CustomPieChart.jsx
+│   │   │   │   └── CustomToolTip.jsx
+│   │   │   ├── chat/
+│   │   │   │   ├── ChatInput.jsx
+│   │   │   │   ├── ChatMessages_fixed.jsx
+│   │   │   │   ├── ChatMessages.jsx
+│   │   │   │   ├── ChatSettingsModal.jsx
+│   │   │   │   ├── ChatSidebar.jsx
+│   │   │   │   └── CreateChatModal.jsx
+│   │   │   ├── Inputs/
+│   │   │   │   ├── AddAttachmentsInput.jsx
+│   │   │   │   ├── Input.jsx
+│   │   │   │   ├── ProfilePhotoSelector.jsx
+│   │   │   │   ├── SelectDropdown.jsx
+│   │   │   │   ├── SelectUsers.jsx
+│   │   │   │   └── ToDoListInput.jsx
+│   │   │   ├── layouts/
+│   │   │   │   ├── AuthLayout.jsx
+│   │   │   │   ├── DashboardLayout.jsx
+│   │   │   │   ├── Navbar.jsx
+│   │   │   │   └── SideMenu.jsx
+│   │   │   ├── AvatarGroup.jsx
+│   │   │   ├── BugListTable.jsx
+│   │   │   ├── BugStatusTabs.jsx
+│   │   │   ├── DeleteAlert.jsx
+│   │   │   ├── Modal.jsx
+│   │   │   └── Progress.jsx
+│   │   ├── context/
+│   │   │   ├── ChatContext.jsx
+│   │   │   └── userContext.jsx
+│   │   ├── hooks/
+│   │   │   └── useUserAuth.jsx
+│   │   ├── pages/
+│   │   │   ├── Admin/
+│   │   │   │   ├── AdminDashboard.jsx
+│   │   │   │   ├── CreateBug.jsx
+│   │   │   │   ├── ManageBugs.jsx
+│   │   │   │   ├── ManageUsers.jsx
+│   │   │   │   └── ViewBugAdmin.jsx
+│   │   │   ├── Auth/
+│   │   │   │   ├── Login.jsx
+│   │   │   │   └── Signup.jsx
+│   │   │   ├── Developer/
+│   │   │   │   ├── AssignedBugs.jsx
+│   │   │   │   ├── DeveloperDashboard.jsx
+│   │   │   │   ├── UpdateBugStatus.jsx
+│   │   │   │   └── ViewAssignedBug.jsx
+│   │   │   ├── Tester/
+│   │   │   │   ├── AllBugs.jsx
+│   │   │   │   ├── CreateBug.jsx
+│   │   │   │   ├── MyBugs.jsx
+│   │   │   │   ├── TesterDashboard.jsx
+│   │   │   │   └── ViewBugDetails.jsx
+│   │   │   ├── ChatPage.jsx
+│   │   │   └── LandingPage.jsx
+│   │   ├── routes/
+│   │   │   └── PrivateRoute.jsx
+│   │   ├── utils/
+│   │   │   ├── apiPaths.js
+│   │   │   ├── axiosInstance.js
+│   │   │   ├── data.js
+│   │   │   ├── helper.js
+│   │   │   └── uploadImage.js
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── README.md
+│   ├── vercel.json
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md
+
 ```
 
 ---
