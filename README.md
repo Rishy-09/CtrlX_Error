@@ -121,219 +121,148 @@ CtrlX is a role-based bug tracking system designed for developers, testers, and 
 
 ```bash
 Directory structure:
-└── rishy-09-ctrlx_error/
-    ├── README.md
-    ├── EMAIL_FIX_INSTRUCTIONS.md
-    ├── EMAIL_SETUP_INSTRUCTIONS.md
-    ├── FINAL_INSTRUCTIONS.md
-    ├── FORGOT_PASSWORD_SOLUTION.md
-    ├── package.json
-    ├── backend/
-    │   ├── check_email_config.js
-    │   ├── createEnv.js
-    │   ├── package-lock.json
-    │   ├── package.json
-    │   ├── server.js
-    │   ├── temp.env
-    │   ├── testEmail.js
-    │   ├── UPDATE_BEFORE_USING.md
-    │   ├── update_env.js
-    │   ├── .env
-    │   ├── .env.backup
-    │   ├── .env.example
-    │   ├── config/
-    │   │   └── db.js
-    │   ├── controllers/
-    │   │   ├── attachmentController.js
-    │   │   ├── authController.js
-    │   │   ├── bugController.js
-    │   │   ├── chatController.js
-    │   │   ├── commentController.js
-    │   │   ├── reminderController.js
-    │   │   ├── reportController.js
-    │   │   ├── taskController.js
-    │   │   └── userController.js
-    │   ├── middlewares/
-    │   │   ├── authMiddleware.js
-    │   │   ├── paramMiddleware.js
-    │   │   └── uploadMiddleware.js
-    │   ├── models/
-    │   │   ├── Attachment.js
-    │   │   ├── Bug.js
-    │   │   ├── Chat.js
-    │   │   ├── Comment.js
-    │   │   ├── Message.js
-    │   │   ├── Reminder.js
-    │   │   ├── Task.js
-    │   │   └── User.js
-    │   ├── routes/
-    │   │   ├── attachmentRoutes.js
-    │   │   ├── authRoutes.js
-    │   │   ├── bugRoutes.js
-    │   │   ├── chatRoutes.js
-    │   │   ├── commentRoutes.js
-    │   │   ├── reminderRoutes.js
-    │   │   ├── reportRoutes.js
-    │   │   ├── taskRoutes.js
-    │   │   └── userRoutes.js
-    │   ├── scripts/
-    │   │   └── setupAIUser.js
-    │   ├── services/
-    │   │   └── aiService.js
-    │   ├── uploads/
-    │   │   ├── attachments-1745157410983-744837053.txt
-    │   │   ├── chats/
-    │   │   │   ├── attachments-1745168644765-714386817.txt
-    │   │   │   ├── attachments-1745168670823-831745076.txt
-    │   │   │   ├── attachments-1745171040229-512460243.txt
-    │   │   │   ├── attachments-1745605114491-705366741.txt
-    │   │   │   ├── attachments-1745644150072-575299861.txt
-    │   │   │   ├── attachments-1745646130585-827892505.txt
-    │   │   │   ├── attachments-1745646140936-695800186.txt
-    │   │   │   ├── attachments-1745649525840-166376579.txt
-    │   │   │   ├── attachments-1745649535698-513999886.txt
-    │   │   │   ├── attachments-1745649579417-570523886.txt
-    │   │   │   ├── attachments-1745649652041-761631468.txt
-    │   │   │   ├── attachments-1745649839883-504446485.txt
-    │   │   │   ├── attachments-1745650235272-905634360.txt
-    │   │   │   ├── attachments-1745650603007-615785239.txt
-    │   │   │   ├── attachments-1745650882143-495779260.txt
-    │   │   │   ├── attachments-1745669295587-729395183.txt
-    │   │   │   ├── attachments-1745670070605-568891844.txt
-    │   │   │   ├── attachments-1745670087803-227386006.txt
-    │   │   │   ├── attachments-1745670124141-733095415.txt
-    │   │   │   ├── attachments-1745670482334-814790763.txt
-    │   │   │   └── attachments-1745670502382-943781806.txt
-    │   │   └── profiles/
-    │   └── utils/
-    │       └── emailService.js
-    ├── frontend/
-    │   ├── README.md
-    │   ├── eslint.config.js
-    │   ├── index.html
-    │   ├── package-lock.json
-    │   ├── package.json
-    │   ├── tailwind.config.js
-    │   ├── vite.config.js
-    │   ├── .gitignore
-    │   ├── public/
-    │   └── src/
-    │       ├── App.jsx
-    │       ├── index.css
-    │       ├── main.jsx
-    │       ├── assets/
-    │       │   └── images/
-    │       ├── components/
-    │       │   ├── AvatarGroup.jsx
-    │       │   ├── BugListTable.jsx
-    │       │   ├── DeleteAlert.jsx
-    │       │   ├── Modal.jsx
-    │       │   ├── MongoIdValidator.jsx
-    │       │   ├── Progress.jsx
-    │       │   ├── Spinner.jsx
-    │       │   ├── TaskListTable.jsx
-    │       │   ├── TaskStatusTabs.jsx
-    │       │   ├── UserAvatar.jsx
-    │       │   ├── Cards/
-    │       │   │   ├── InfoCard.jsx
-    │       │   │   ├── TaskCard.jsx
-    │       │   │   └── UserCard.jsx
-    │       │   ├── Charts/
-    │       │   │   ├── CustomBarChart.jsx
-    │       │   │   ├── CustomLegend.jsx
-    │       │   │   ├── CustomPieChart.jsx
-    │       │   │   └── CustomToolTip.jsx
-    │       │   ├── Comments/
-    │       │   │   └── CommentSection.jsx
-    │       │   ├── Inputs/
-    │       │   │   ├── AddAttachmentsInput.jsx
-    │       │   │   ├── Input.jsx
-    │       │   │   ├── ProfilePhotoSelector.jsx
-    │       │   │   ├── SelectDropdown.jsx
-    │       │   │   ├── SelectUsers.jsx
-    │       │   │   └── ToDoListInput.jsx
-    │       │   ├── layouts/
-    │       │   │   ├── AuthLayout.jsx
-    │       │   │   ├── DashboardLayout.jsx
-    │       │   │   ├── Footer.jsx
-    │       │   │   ├── MainLayout.jsx
-    │       │   │   ├── Navbar.jsx
-    │       │   │   ├── Navigation.jsx
-    │       │   │   ├── SideMenu.jsx
-    │       │   │   └── ThemeToggle.jsx
-    │       │   ├── Reminders/
-    │       │   │   ├── NotificationBell.jsx
-    │       │   │   └── ReminderForm.jsx
-    │       │   └── TimeTracking/
-    │       │       └── TimeTracker.jsx
-    │       ├── context/
-    │       │   ├── ChatContext.jsx
-    │       │   └── userContext.jsx
-    │       ├── hooks/
-    │       │   └── useUserAuth.jsx
-    │       ├── pages/
-    │       │   ├── Admin/
-    │       │   │   ├── CreateTask.jsx
-    │       │   │   ├── Dashboard.jsx
-    │       │   │   ├── ManageTasks.jsx
-    │       │   │   └── ManageUsers.jsx
-    │       │   ├── Auth/
-    │       │   │   ├── ForgotPassword.jsx
-    │       │   │   ├── Login.jsx
-    │       │   │   ├── ResetPassword.jsx
-    │       │   │   └── Signup.jsx
-    │       │   ├── Chat/
-    │       │   │   ├── ChatPage.jsx
-    │       │   │   └── components/
-    │       │   │       ├── ChatInput.jsx
-    │       │   │       ├── ChatMessages.jsx
-    │       │   │       ├── ChatSettingsModal.jsx
-    │       │   │       ├── ChatSidebar.jsx
-    │       │   │       ├── CreateChatModal.jsx
-    │       │   │       └── MessageItem.jsx
-    │       │   ├── Company/
-    │       │   │   ├── About.jsx
-    │       │   │   └── Contact.jsx
-    │       │   ├── Features/
-    │       │   │   └── Features.jsx
-    │       │   ├── Landing/
-    │       │   │   └── LandingPage.jsx
-    │       │   ├── NotFound/
-    │       │   │   └── NotFound.jsx
-    │       │   ├── Pricing/
-    │       │   │   └── PricingPage.jsx
-    │       │   ├── Terms/
-    │       │   │   ├── DataStoragePolicy.jsx
-    │       │   │   ├── PrivacyPolicy.jsx
-    │       │   │   └── TermsOfService.jsx
-    │       │   └── User/
-    │       │       ├── MyTasks.jsx
-    │       │       ├── UserDashboard.jsx
-    │       │       ├── UserSettings.jsx
-    │       │       └── ViewTaskDetails.jsx
-    │       ├── routes/
-    │       │   ├── index.jsx
-    │       │   └── PrivateRoute.jsx
-    │       ├── services/
-    │       │   └── bugService.js
-    │       └── utils/
-    │           ├── apiPaths.js
-    │           ├── axiosInstance.js
-    │           ├── data.js
-    │           ├── helper.js
-    │           ├── routeValidators.js
-    │           └── uploadImage.js
-    ├── src/
-    │   ├── context/
-    │   │   └── ChatContext.jsx
-    │   └── pages/
-    │       └── Chat/
-    │           ├── ChatPage.jsx
-    │           └── components/
-    │               └── ChatInput.jsx
-    └── uploads/
-        └── profiles/
-            └── .gitkeep
+rishy-09-ctrlx_error/
+├── backend/
+│   ├── config/
+│   │   └── db.js
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── bugController.js
+│   │   ├── chatController.js
+│   │   ├── reportController.js
+│   │   └── userController.js
+│   ├── middlewares/
+│   │   ├── auth.js
+│   │   ├── authmiddleware.js
+│   │   └── uploadMiddleware.js
+│   ├── models/
+│   │   ├── Bug.js
+│   │   ├── Chat.js
+│   │   ├── Message.js
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── bugRoutes.js
+│   │   ├── chatRoutes.js
+│   │   ├── reportRoutes.js
+│   │   └── userRoutes.js
+│   ├── services/
+│   │   └── aiService.js
+│   ├── uploads/
+│   │   └── 1743857317797-profile.jpg
+│   ├── package-lock.json
+│   ├── package.json
+│   └── server.js
+│
+├── docs/
+│   ├── FinalReport.pdf
+│   ├── LiveWebsiteLink_Deployment_&_Integrations.pdf
+│   ├── PreFinalReport.pdf
+│   ├── Presentation.pdf
+│   ├── ProjectRiskAnalysisSurvey.xlsx
+│   ├── RisksAnalysisReport.pdf
+│   ├── SRS.pdf
+│   └── StudentFeedbackQuestionnaire_AI_in_Software_Engineering_Projectsform_Responses.xlsx
+│
+├── frontend/
+│   ├── public/
+│   │   ├── 4882066.jpg
+│   │   ├── logo.png
+│   │   └── vite.svg
+│   ├── src/
+│   │   ├── assets/
+│   │   │   ├── images/
+│   │   │       ├── Amulya.jpeg
+│   │   │       ├── auth-bg.jpeg
+│   │   │       ├── bug_tracking.jpg
+│   │   │       ├── Naman.png
+│   │   │       ├── Smriti.jpeg
+│   │   │       └── Soumya.jpeg
+│   │   ├── components/
+│   │   │   ├── Cards/
+│   │   │   │   ├── BugCard.jsx
+│   │   │   │   ├── InfoCard.jsx
+│   │   │   │   └── UserCard.jsx
+│   │   │   ├── Charts/
+│   │   │   │   ├── CustomBarChart.jsx
+│   │   │   │   ├── CustomLegend.jsx
+│   │   │   │   ├── CustomPieChart.jsx
+│   │   │   │   └── CustomToolTip.jsx
+│   │   │   ├── chat/
+│   │   │   │   ├── ChatInput.jsx
+│   │   │   │   ├── ChatMessages_fixed.jsx
+│   │   │   │   ├── ChatMessages.jsx
+│   │   │   │   ├── ChatSettingsModal.jsx
+│   │   │   │   ├── ChatSidebar.jsx
+│   │   │   │   └── CreateChatModal.jsx
+│   │   │   ├── Inputs/
+│   │   │   │   ├── AddAttachmentsInput.jsx
+│   │   │   │   ├── Input.jsx
+│   │   │   │   ├── ProfilePhotoSelector.jsx
+│   │   │   │   ├── SelectDropdown.jsx
+│   │   │   │   ├── SelectUsers.jsx
+│   │   │   │   └── ToDoListInput.jsx
+│   │   │   ├── layouts/
+│   │   │   │   ├── AuthLayout.jsx
+│   │   │   │   ├── DashboardLayout.jsx
+│   │   │   │   ├── Navbar.jsx
+│   │   │   │   └── SideMenu.jsx
+│   │   │   ├── AvatarGroup.jsx
+│   │   │   ├── BugListTable.jsx
+│   │   │   ├── BugStatusTabs.jsx
+│   │   │   ├── DeleteAlert.jsx
+│   │   │   ├── Modal.jsx
+│   │   │   └── Progress.jsx
+│   │   ├── context/
+│   │   │   ├── ChatContext.jsx
+│   │   │   └── userContext.jsx
+│   │   ├── hooks/
+│   │   │   └── useUserAuth.jsx
+│   │   ├── pages/
+│   │   │   ├── Admin/
+│   │   │   │   ├── AdminDashboard.jsx
+│   │   │   │   ├── CreateBug.jsx
+│   │   │   │   ├── ManageBugs.jsx
+│   │   │   │   ├── ManageUsers.jsx
+│   │   │   │   └── ViewBugAdmin.jsx
+│   │   │   ├── Auth/
+│   │   │   │   ├── Login.jsx
+│   │   │   │   └── Signup.jsx
+│   │   │   ├── Developer/
+│   │   │   │   ├── AssignedBugs.jsx
+│   │   │   │   ├── DeveloperDashboard.jsx
+│   │   │   │   ├── UpdateBugStatus.jsx
+│   │   │   │   └── ViewAssignedBug.jsx
+│   │   │   ├── Tester/
+│   │   │   │   ├── AllBugs.jsx
+│   │   │   │   ├── CreateBug.jsx
+│   │   │   │   ├── MyBugs.jsx
+│   │   │   │   ├── TesterDashboard.jsx
+│   │   │   │   └── ViewBugDetails.jsx
+│   │   │   ├── ChatPage.jsx
+│   │   │   └── LandingPage.jsx
+│   │   ├── routes/
+│   │   │   └── PrivateRoute.jsx
+│   │   ├── utils/
+│   │   │   ├── apiPaths.js
+│   │   │   ├── axiosInstance.js
+│   │   │   ├── data.js
+│   │   │   ├── helper.js
+│   │   │   └── uploadImage.js
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── README.md
+│   ├── vercel.json
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md
 
 ```
 
