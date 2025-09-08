@@ -317,7 +317,7 @@ const LandingPage = () => {
               Simple, Transparent Pricing
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Choose the plan that's right for your team. All plans include a
+              Choose the plan that's right for your team. All paid plans include a
               14-day free trial.
             </p>
           </div>
@@ -330,7 +330,7 @@ const LandingPage = () => {
                   Starter
                 </h3>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-800">$29</span>
+                  <span className="text-4xl font-bold text-gray-800">Free 0$</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <p className="text-gray-600 mb-6">
