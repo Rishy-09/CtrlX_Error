@@ -172,13 +172,12 @@ rishy-09-ctrlx_error/
 │   ├── src/
 │   │   ├── assets/
 │   │   │   ├── images/
-│   │   │   │   ├── Amulya.jpeg
-│   │   │   │   ├── auth-bg.jpeg
-│   │   │   │   ├── bug_tracking.jpg
-│   │   │   │   ├── Naman.png
-│   │   │   │   ├── Smriti.jpeg
-│   │   │   │   └── Soumya.jpeg
-│   │   │   └── react.svg
+│   │   │       ├── Amulya.jpeg
+│   │   │       ├── auth-bg.jpeg
+│   │   │       ├── bug_tracking.jpg
+│   │   │       ├── Naman.png
+│   │   │       ├── Smriti.jpeg
+│   │   │       └── Soumya.jpeg
 │   │   ├── components/
 │   │   │   ├── Cards/
 │   │   │   │   ├── BugCard.jsx
