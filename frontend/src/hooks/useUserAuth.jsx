@@ -1,4 +1,4 @@
-import {useEffect, useContext, use} from 'react';
+import {useEffect, useContext} from 'react';
 import {useNavigate} from 'react-router-dom';
 import { UserContext } from '../context/userContext';
 
@@ -14,3 +14,7 @@ export const useUserAuth = () => {
         }
     }, [user, loading, navigate, clearUser]);
 }
+
+// Re-export the UserContext for convenience
+export { UserContext };
+export const useUserContext = () => useContext(UserContext);

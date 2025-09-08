@@ -4,97 +4,87 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const REFERRER_URL = process.env.REFERRER_URL || 'http://localhost:5173/';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+const MAX_HISTORY_LENGTH = 10;
 
 /**
- * Generate an AI response to a message based on chat history
- * @param {string} chatId - The ID of the chat
- * @param {Array} messages - Array of message objects with sender and content
- * @param {Object} aiConfig - Configuration for the AI assistant
- * @returns {Promise<string>} - The AI generated response
+ * Formats chat messages for OpenRouter API
+ * @param {Array} messages - Chat messages to format
+ * @param {Object} chat - Chat object with AI configuration
+ * @returns {Array} Formatted messages for API
  */
-export const generateAIResponse = async (chatId, messages, aiConfig = {}) => {
-  // Check if API key is available
-  if (!OPENROUTER_API_KEY) {
-    console.error('OpenRouter API key not found in environment variables');
-    throw new Error('AI configuration error: API key missing');
-  }
-
-  try {
-    // Default model if not specified
-    const model = aiConfig.model || 'openai/gpt-3.5-turbo';
-    
-    // Format the messages for the API
-    const formattedMessages = messages.map(msg => ({
-      role: msg.sender?.isAI ? 'assistant' : 'user',
-      content: msg.content
-    }));
-
-    // Add system message if specified in config
-    if (aiConfig.systemPrompt) {
-      formattedMessages.unshift({
-        role: 'system',
-        content: aiConfig.systemPrompt
-      });
-    } else {
-      // Default system prompt
-      formattedMessages.unshift({
-        role: 'system',
-        content: 'You are a helpful assistant responding in a chat application. Keep your answers concise and helpful.'
-      });
+const formatConversation = (messages, chat) => {
+  // Add system message
+  const formattedMessages = [
+    {
+      role: 'system',
+      content: chat.aiAssistant.systemPrompt || 'You are a helpful assistant in a bug tracking application.'
     }
-
-    console.log(`Generating AI response using model: ${model}, with ${formattedMessages.length} messages`);
+  ];
+  
+  // Add recent conversation messages (limit to prevent token overflow)
+  const recentMessages = messages.slice(-MAX_HISTORY_LENGTH);
+  
+  recentMessages.forEach(message => {
+    // Skip deleted messages
+    if (message.isDeleted) return;
     
-    // Make the API call with proper authentication
+    formattedMessages.push({
+      role: message.isAIMessage ? 'assistant' : 'user',
+      content: message.content,
+      // Include names for better context
+      name: message.sender?.name
+    });
+  });
+  
+  return formattedMessages;
+};
+
+/**
+ * Calls OpenRouter API to get AI response
+ * @param {Array} messages - Formatted messages
+ * @param {String} model - AI model to use
+ * @returns {Promise<String>} AI response content
+ */
+export const getAIResponse = async (messages, chat) => {
+  try {
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OpenRouter API key not configured');
+    }
+    
+    const formattedMessages = formatConversation(messages, chat);
+    
     const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
+      OPENROUTER_URL,
       {
-        model: model,
         messages: formattedMessages,
-        max_tokens: aiConfig.maxTokens || 1000,
-        temperature: aiConfig.temperature || 0.7
+        model: chat.aiAssistant.model || 'gpt-3.5-turbo',
+        max_tokens: 1000,
       },
       {
         headers: {
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': REFERRER_URL,
-          'X-Title': 'Task Management System Chat',
           'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.APPLICATION_URL || 'http://localhost:5000',
         }
       }
     );
-
-    // Extract and return the generated text
-    if (response.data?.choices?.[0]?.message?.content) {
-      return response.data.choices[0].message.content.trim();
+    
+    if (response.data.choices && response.data.choices.length > 0) {
+      return response.data.choices[0].message.content;
     } else {
-      console.error('Unexpected API response format:', response.data);
-      throw new Error('Invalid response from AI service');
+      throw new Error('No response from AI service');
     }
   } catch (error) {
-    console.error('Error generating AI response:', error.message);
-    
-    // Provide more specific error information
+    console.error('AI Service Error:', error.message);
     if (error.response) {
-      const status = error.response.status;
-      const data = error.response.data;
-      
-      if (status === 401) {
-        console.error('Authentication error with AI service:', data);
-        throw new Error('AI service authentication failed. Please check your API key.');
-      } else if (status === 429) {
-        throw new Error('AI service rate limit exceeded. Please try again later.');
-      } else {
-        console.error('AI service error response:', data);
-        throw new Error(`AI service error: ${status} - ${data?.error?.message || 'Unknown error'}`);
-      }
+      console.error('API Response:', error.response.data);
     }
-    
-    throw new Error(`Failed to generate AI response: ${error.message}`);
+    throw new Error(`AI response failed: ${error.message}`);
   }
 };
 
 export default {
-  generateAIResponse
+  getAIResponse
 }; 

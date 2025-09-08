@@ -1,23 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
 
-/* Add these at the top of the file */
-:root {
-  --primary-color: #3b82f6;
-  --primary-hover: #2563eb;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --info-color: #3b82f6;
-  --background-color: #ffffff;
-  --card-background: #ffffff;
-  --text-color: #374151;
-  --text-light: #6b7280;
-  --border-color: #e5e7eb;
-  --input-background: #f9fafb;
-  --hover-background: #f3f4f6;
-}
-
 /* Need to study on this below   16min 27sec*/
 @theme {
     --font-display:  "Poppins", "sans-serif";
@@ -30,26 +13,17 @@
         font-family: var(--font-display);   
     }
     body {
-        background-color: var(--background-color);
-        color: var(--text-color);
+        background-color: #fcfbfc;
         overflow-x: hidden;
-        transition: background-color 0.3s, color 0.3s;
     }
 }
 
 .input-box {
-    @apply w-full flex justify-between gap-3 text-sm text-gray-800 bg-slate-100/50 rounded px-4 py-3 mb-4 mt-3 border border-slate-200 outline-none;
+    @apply w-full flex justify-between gap-3 text-sm text-black bg-slate-100/50 rounded px-4 py-3 mb-4 mt-3 border border-slate-200 outline-none;
 }
 
 .btn-primary{
     @apply w-full text-sm font-medium text-white bg-primary shadow-lg shadow-purple-600/5 p-[10px] rounded-md my-1 hover:bg-blue-600/15 hover:text-blue-600 cursor-pointer; 
-    background-color: var(--primary-color);
-    color: white;
-    transition: background-color 0.3s;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-hover);
 }
 
 .card {
@@ -69,7 +43,7 @@
 }
 
 .form-input {
-    @apply w-full text-sm text-gray-800 outline-none bg-white border border-slate-100 px-2.5 py-3 rounded-md mt-2 placeholder:text-gray-500;
+    @apply w-full text-sm text-black outline-none bg-white border border-slate-100 px-2.5 py-3 rounded-md mt-2 placeholder:text-gray-500;
 }
 
 .add-btn {
@@ -77,128 +51,33 @@
 }
 
 .download-btn {
-    @apply items-center gap-3 text-xs md:text-[13px] text-lime-900 bg-lime-100 px-2 md:px-3 py-2 rounded border border-lime-200 hover:border-lime-400 cursor-pointer;
+    @apply items-center gap-3 text-xs  md:text-[13px] text-lime-900 bg-lime-100 px-2 md:px-3 py-2 rounded border border-lime-200 hover:border-lime-400 cursor-pointer;
 }
 
 .user-card {
-    @apply bg-white p-4 rounded-xl shadow-md shadow-gray-100 border border-gray-200/50;
+    @apply bg-white p-4  rounded-xl shadow-md shadow-gray-100 border border-gray-200/50 ;
 }
 
-/* Add these rules to prevent flickering */
-* {
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  will-change: auto;
-  box-sizing: border-box;
+/* Modal animations */
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out forwards;
 }
 
-/* Improve scrolling performance */
-.overflow-y-auto, 
-.overflow-auto, 
-.overflow-x-auto {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: auto;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* Force hardware acceleration for animations */
-.flex,
-.flex-col,
-.h-full,
-.h-screen {
-  transform: translateZ(0);
-  will-change: transform;
+.btn-outline {
+    @apply flex items-center justify-center gap-1.5 text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap bg-gray-100 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-200 cursor-pointer transition-colors;
 }
 
-/* Stabilize fixed and sticky elements */
-.fixed, 
-.sticky, 
-.absolute {
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-/* Chat message specific optimizations */
-.chat-message {
-  contain: content;
-  will-change: transform;
-}
-
-/* Prevent content jumps for layout */
-.flex-grow {
-  contain: layout style;
-}
-
-/* Performance optimization for attachment rendering */
-.attachment-preview {
-  contain: content;
-  will-change: auto;
-}
-
-/* Spinner animation optimizations */
-.spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: #3498db;
-  animation: spin 1s linear infinite;
-  width: 2rem;
-  height: 2rem;
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Add transition classes to prevent flickering */
-.chat-transition {
-  transition: opacity 0.2s ease-in-out;
-  will-change: opacity;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-/* Prevent layout shifts */
-.page-container {
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-  contain: layout style paint;
-}
-
-/* Stabilize rendering with contain properties */
-.contain-paint {
-  contain: paint;
-}
-
-.contain-layout {
-  contain: layout;
-}
-
-/* Prevent flickering with stable positioning */
-.fixed-container {
-  position: relative;
-  z-index: 1;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-/* Optimize for low-end devices with reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Make active chat item visually distinct with smoother transitions */
-.active-chat-item {
-  border-left: 4px solid #3b82f6;
-  background-color: #eff6ff;
-  transition: background-color 0.2s ease-in-out, border-left 0.1s ease-in-out;
+.btn-delete {
+    @apply flex items-center justify-center gap-1.5 text-xs md:text-sm font-medium text-white whitespace-nowrap bg-rose-500 border border-rose-600 rounded-lg px-4 py-2 hover:bg-rose-600 cursor-pointer transition-colors;
 }

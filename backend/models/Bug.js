@@ -1,134 +1,138 @@
 import mongoose from "mongoose";
 
-const BugSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: [true, "Title is required"],
-      trim: true,
-      maxlength: [100, "Title cannot be more than 100 characters"]
+const checklistItemSchema = new mongoose.Schema({
+    text: {
+        type: String,
+        required: [true, "Checklist item text is required"],
+        trim: true
     },
-    description: {
-      type: String,
-      required: [true, "Description is required"],
-      trim: true,
-      maxlength: [5000, "Description cannot be more than 5000 characters"]
+    completed: {
+        type: Boolean,
+        default: false
     },
-    steps: {
-      type: String,
-      trim: true,
-      maxlength: [5000, "Steps to reproduce cannot be more than 5000 characters"]
+    completedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     },
-    status: {
-      type: String,
-      enum: ["Open", "In Progress", "Testing", "Closed", "Reopened"],
-      default: "Open"
-    },
-    priority: {
-      type: String,
-      enum: ["Low", "Medium", "High", "Critical"],
-      default: "Medium"
-    },
-    severity: {
-      type: String,
-      enum: ["Minor", "Major", "Critical", "Blocker"],
-      default: "Minor"
-    },
-    reporter: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null
-    },
-    todoChecklist: [
-      {
-        item: {
-          type: String,
-          required: true
-        },
-        completed: {
-          type: Boolean,
-          default: false
-        },
-        completedAt: {
-          type: Date,
-          default: null
-        },
-        completedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          default: null
-        }
-      }
-    ],
-    progress: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    },
-    attachments: [
-      {
-        filename: String,
-        path: String,
-        mimetype: String,
-        size: Number,
-        uploadedAt: {
-          type: Date,
-          default: Date.now
-        }
-      }
-    ],
-    environment: {
-      type: String,
-      trim: true
-    },
-    browser: {
-      type: String,
-      trim: true
-    },
-    os: {
-      type: String,
-      trim: true
-    },
-    version: {
-      type: String,
-      trim: true
-    },
-    dueDate: {
-      type: Date,
-      default: null
-    },
-    closedAt: {
-      type: Date,
-      default: null
-    },
-    closedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null
-    },
-    bugType: {
-      type: String,
-      enum: ["Functional", "UI/UX", "Performance", "Security", "Compatibility", "Other"],
-      default: "Functional"
+    completedAt: {
+        type: Date
     }
-  },
-  {
-    timestamps: true
-  }
+});
+
+const bugSchema = new mongoose.Schema(
+    {
+        title: {
+            type: String,
+            required: [true, "Title is required"],
+            trim: true,
+            minlength: [5, "Title must be at least 5 characters long"],
+        },
+        description: {
+            type: String,
+            required: [true, "Description is required"],
+            trim: true,
+            minlength: [10, "Description must be at least 10 characters long"]
+        },
+        priority: {
+            type: String,
+            enum: ["Low", "Medium", "High"],
+            default: "Medium",
+            required: true
+        },
+        severity: {
+            type: String,
+            enum: ["Minor", "Major", "Critical"],
+            default: "Minor",
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ["Open", "In Progress", "Closed"],
+            default: "Open",
+            required: true
+        },
+        dueDate: {
+            type: Date,
+            validate: {
+                validator: function(value) {
+                    if (!value) return true;
+                    return value > new Date();
+                },
+                message: "Due date must be in the future"
+            }
+        },
+        module: {
+            type: String,
+            trim: true,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        assignedTo: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: [true, "At least one developer must be assigned"]
+        }],
+        attachments: [{
+            type: String,
+            trim: true
+        }],
+        checklist: {
+            type: [checklistItemSchema],
+            validate: {
+                validator: function(v) {
+                    return Array.isArray(v);
+                },
+                message: "Checklist must be an array"
+            }
+        },
+        lastUpdatedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        },
+        updateHistory: [{
+            field: String,
+            oldValue: mongoose.Schema.Types.Mixed,
+            newValue: mongoose.Schema.Types.Mixed,
+            updatedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            },
+            updatedAt: {
+                type: Date,
+                default: Date.now
+            }
+        }]
+    },
+    {
+        timestamps: true
+    }
 );
 
-// Indexing for better performance
-BugSchema.index({ status: 1 });
-BugSchema.index({ priority: 1 });
-BugSchema.index({ assignedTo: 1 });
-BugSchema.index({ reporter: 1 });
-BugSchema.index({ createdAt: -1 });
+// Add index for better query performance
+bugSchema.index({ createdBy: 1, status: 1 });
+bugSchema.index({ assignedTo: 1, status: 1 });
+bugSchema.index({ title: "text", description: "text" });
 
-const Bug = mongoose.model("Bug", BugSchema);
-export default Bug; 
+// Pre-save middleware to track updates
+bugSchema.pre('save', function(next) {
+    if (this.isModified()) {
+        const modifiedFields = this.modifiedPaths();
+        modifiedFields.forEach(field => {
+            if (field !== 'updateHistory' && field !== 'lastUpdatedBy') {
+                this.updateHistory.push({
+                    field,
+                    oldValue: this.get(field),
+                    newValue: this.get(field),
+                    updatedBy: this.lastUpdatedBy
+                });
+            }
+        });
+    }
+    next();
+});
+
+const Bug = mongoose.model("Bug", bugSchema);
+export default Bug;

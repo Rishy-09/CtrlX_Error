@@ -4,72 +4,31 @@ const UserSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: [true, "Name is required"],
-            trim: true,
-            maxlength: [50, "Name cannot be more than 50 characters"]
+            required: true,
         },
         email: {
             type: String,
-            required: [true, "Email is required"],
+            required: true,
             unique: true,
-            trim: true,
-            match: [
-                /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-                "Please add a valid email"
-            ]
         },
         password: {
             type: String,
-            required: [true, "Password is required"],
-            minlength: [6, "Password must be at least 6 characters"]
+            required: true,
         },
         profileImageURL: {
             type: String,
-            default: "https://res.cloudinary.com/dykjpvgga/image/upload/v1674645487/a9ljktjl3o8f2fbwm2kt.jpg"
+            default: null,
         },
         role: {
             type: String,
-            enum: ["admin", "developer", "tester"],
-            default: "tester"
-        },
-        department: {
-            type: String,
-            default: "General",
-        },
-        title: {
-            type: String,
-            default: "",
-        },
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
-        notificationSettings: {
-            type: Object,
-            default: {
-                emailNotifications: true,
-                taskAssigned: true,
-                taskUpdated: true,
-                commentMention: true,
-                deadlineReminder: true
-            }
-        },
-        lastLogin: {
-            type: Date,
-            default: Date.now
-        },
-        resetPasswordToken: {
-            type: String
-        },
-        resetPasswordExpires: {
-            type: Date
+            enum: ["admin", "tester", "developer"], 
+            default: "tester",
         }
     },
-    {
-        timestamps: true
+    { 
+        timestamps: true 
     }
 );
 
 const User = mongoose.model("User", UserSchema);
-
 export default User;

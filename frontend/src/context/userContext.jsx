@@ -1,15 +1,26 @@
-import React, {createContext, useState, useEffect} from "react";
+import React, {createContext, useState, useEffect, useContext} from "react";
 import axiosInstance from "../utils/axiosInstance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 export const UserContext = createContext();
+
+// Custom hook to use the UserContext
+export const useUserContext = () => {
+    const context = useContext(UserContext);
+    if (!context) {
+        throw new Error("useUserContext must be used within a UserProvider");
+    }
+    return context;
+};
+
+// Alias for useUserContext to maintain compatibility with chat system
+export const useAuth = useUserContext;
 
 const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true); // New state to track loading
 
     useEffect(() => {
-        // Only fetch if no user is set and we're still in loading state
         if (user) return;
 
         const accessToken = localStorage.getItem("token");
@@ -18,21 +29,10 @@ const UserProvider = ({ children }) => {
             return;
         }
 
-        // Skip if we already attempted to fetch the user
-        if (!loading) return;
-
         const fetchUser = async () => {
             try {
                 const response = await axiosInstance.get(API_PATHS.AUTH.GET_PROFILE);
-                // Handle nested user object from the backend response
-                if (response.data && response.data.user) {
-                    // Add token to user object
-                    const userData = {
-                        ...response.data.user,
-                        token: accessToken
-                    };
-                    setUser(userData);
-                }
+                setUser(response.data.user); // Set user data from response
             }
             catch (error) {
                 console.error("User not authenticated", error);
@@ -42,7 +42,7 @@ const UserProvider = ({ children }) => {
             }
         }
         fetchUser();
-    }, [user, loading]); // Added dependencies to prevent infinite loops
+    }, []);
 
     const updateUser = (userData) => {
         setUser(userData);
@@ -56,10 +56,13 @@ const UserProvider = ({ children }) => {
     };
 
     return (
-        <UserContext.Provider value={{ user, loading, updateUser, clearUser }}> 
+        <UserContext.Provider value={{ user, loading, updateUser, clearUser, token: localStorage.getItem("token") }}> 
             {children}
         </UserContext.Provider>
     );
 }
+
+// Export UserProvider directly to maintain compatibility
+export { UserProvider };
 
 export default UserProvider;

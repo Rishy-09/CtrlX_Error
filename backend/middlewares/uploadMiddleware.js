@@ -1,82 +1,26 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
-// Ensure uploads directory exists
-const uploadDir = "./uploads";
-const bugAttachmentsDir = path.join(uploadDir, "bugs");
-const profileImagesDir = path.join(uploadDir, "profiles");
-const chatAttachmentsDir = path.join(uploadDir, "chats");
-
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
-
-if (!fs.existsSync(bugAttachmentsDir)) {
-    fs.mkdirSync(bugAttachmentsDir);
-}
-
-if (!fs.existsSync(profileImagesDir)) {
-    fs.mkdirSync(profileImagesDir);
-}
-
-if (!fs.existsSync(chatAttachmentsDir)) {
-    fs.mkdirSync(chatAttachmentsDir);
-}
-
-// Configure storage
+// Configur storage for multer
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        // Determine the upload directory based on the route
-        let uploadPath = uploadDir;
-        if (req.baseUrl.includes("/bugs") || req.baseUrl.includes("/comments")) {
-            uploadPath = bugAttachmentsDir;
-        } else if (req.baseUrl.includes("/users") || req.baseUrl.includes("/auth")) {
-            uploadPath = profileImagesDir;
-        } else if (req.baseUrl.includes("/chats")) {
-            uploadPath = chatAttachmentsDir;
-        }
-        
-        cb(null, uploadPath);
+    destination: (req, file, cb) => {
+        cb(null, "uploads/"); // Directory to save uploaded files
     },
-    filename: function (req, file, cb) {
-        // Generate a unique filename
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, file.fieldname + "-" + uniqueSuffix + ext);
-    }
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
 });
 
-// File filter to restrict file types
+// File filter 
 const fileFilter = (req, file, cb) => {
-    // Accept images, documents, PDFs, etc.
-    const allowedFileTypes = [
-        "image/jpeg", 
-        "image/png", 
-        "image/gif", 
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/plain",
-        "text/csv"
-    ];
-    
-    if (allowedFileTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Invalid file type. Only images, PDFs, and documents are allowed."), false);
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true); // Accept the file
+    } 
+    else {
+        cb(new Error("Only .jpeg .jpg and .png formats are allowed"), false); // Reject the file
     }
 };
 
-// Configure multer with storage and file filter
-const upload = multer({ 
-    storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB file size limit
-    }
-});
+const upload = multer({storage, fileFilter});
 
 export default upload;
