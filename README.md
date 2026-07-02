@@ -918,7 +918,9 @@ Contribution guidelines:
 
 ## License
 
-This project uses the GPL-3.0 license.
+This project is licensed under the GNU General Public License v3.0.
+
+See the LICENSE file for details.
 
 ---
 
