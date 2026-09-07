@@ -14,7 +14,7 @@ const ChatSettingsModal = ({ chat, onClose }) => {
     admins: chat.admins.map(a => a._id),
     aiAssistant: {
       enabled: chat.aiAssistant?.enabled || false,
-      model: chat.aiAssistant?.model || 'gpt-3.5-turbo',
+      model: chat.aiAssistant?.model || 'inclusionai/ling-3.0-flash-fin:free',
       systemPrompt: chat.aiAssistant?.systemPrompt || 'You are a helpful assistant in a bug tracking application.'
     }
   });
@@ -324,6 +324,9 @@ const ChatSettingsModal = ({ chat, onClose }) => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md"
                           disabled={!isAdmin}
                         >
+                          <option value="inclusionai/ling-3.0-flash-fin:free">Ling 3.0 Flash Fin (Free)</option>
+                          <option value="minimax/minimax-m3:free">MiniMax M3 (Free)</option>
+                          <option value="nvidia/nemotron-3-super-120b-a12b:free">Nvidia Nemotron-3 Super 120B (Free)</option>
                           <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                           <option value="gpt-4">GPT-4</option>
                           <option value="claude-3-sonnet">Claude 3 Sonnet</option>
