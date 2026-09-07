@@ -9,6 +9,7 @@ import {
   FaChevronDown,
 } from "react-icons/fa";
 import { format } from "date-fns";
+import { BASE_URL } from "../../utils/apiPaths";
 
 const ChatMessages = () => {
   const {
@@ -111,13 +112,13 @@ const ChatMessages = () => {
     if (mimetype.startsWith("image/")) {
       return (
         <a
-          href={`http://localhost:8000/${path}`}
+          href={`${BASE_URL}/${path}`}
           target="_blank"
           rel="noopener noreferrer"
           className="block mt-1 max-w-xs"
         >
           <img
-            src={`http://localhost:8000/${path}`}
+            src={`${BASE_URL}/${path}`}
             alt={filename}
             className="rounded border border-gray-200 max-h-40 object-contain"
           />
@@ -126,7 +127,7 @@ const ChatMessages = () => {
     } else {
       return (
         <a
-          href={`http://localhost:8000/${path}`}
+          href={`${BASE_URL}/${path}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center mt-1 p-2 bg-gray-100 rounded"

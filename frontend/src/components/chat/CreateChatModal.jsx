@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useChat } from '../../context/ChatContext';
 import axios from 'axios';
 import { useAuth } from '../../context/userContext';
+import { API_BASE_URL } from "../../utils/apiPaths";
 import { FaTimes, FaRobot } from 'react-icons/fa';
 
 const CreateChatModal = ({ onClose }) => {
@@ -25,9 +26,7 @@ const CreateChatModal = ({ onClose }) => {
     const fetchUsers = async () => {
       setLoadingUsers(true);
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/users`,
-          {
+        const response = await axios.get(`${API_BASE_URL}/users`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
