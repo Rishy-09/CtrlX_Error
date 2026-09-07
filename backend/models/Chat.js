@@ -32,7 +32,7 @@ const ChatSchema = new mongoose.Schema(
       },
       model: {
         type: String,
-        enum: ["gpt-3.5-turbo", "gpt-4", "claude-3-sonnet", "claude-3-opus"],
+        enum: ["gpt-3.5-turbo", "gpt-4", "claude-3-sonnet", "claude-3-opus", "inclusionai/ling-3.0-flash-fin:free", "minimax/minimax-m3:free", "nvidia/nemotron-3-super-120b-a12b:free"],
         default: "gpt-3.5-turbo",
       },
       systemPrompt: {
