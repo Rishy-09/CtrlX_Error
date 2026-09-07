@@ -8,6 +8,8 @@ import {
 import axios from "axios";
 import { useAuth } from "./userContext";
 
+import { API_BASE_URL } from "../utils/apiPaths";
+
 const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
@@ -26,7 +28,7 @@ export const ChatProvider = ({ children }) => {
   const [messagePage, setMessagePage] = useState(1);
 
   const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
+    baseURL: API_BASE_URL,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
