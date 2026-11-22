@@ -5,7 +5,7 @@
 ### Full-Stack Bug Tracking & Team Collaboration Platform
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-success?style=for-the-badge)](https://ctrl-x-error.vercel.app/)
-[![CI](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml/badge.svg)](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml)
+[![CI](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml)
 [![Figma Design](https://img.shields.io/badge/Figma-UI%2FUX-F24E1E?style=for-the-badge&logo=figma&logoColor=white)](https://www.figma.com/design/wF8zt2Kh5jmG3qMGbCKIPv/Smriti?node-id=0-1)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express-5-black?style=for-the-badge&logo=express)](https://expressjs.com/)
