@@ -4,3 +4,11 @@ node_modules/
 # Runtime uploads
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Environment files
+.env
+.env.*
+temp.env
+
+# Keep public environment templates
+!.env.example
