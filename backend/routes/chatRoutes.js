@@ -20,7 +20,28 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const allowedMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+  "text/plain",
+]);
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 5,
+  },
+  fileFilter: (req, file, cb) => {
+    if (allowedMimeTypes.has(file.mimetype)) {
+      return cb(null, true);
+    }
+
+    cb(new Error("Unsupported attachment type"));
+  },
+});
 
 const router = express.Router();
 

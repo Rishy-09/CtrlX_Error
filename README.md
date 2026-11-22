@@ -1,148 +1,144 @@
-# CtrlX_Error
-
-CtrlX_Error is a full-stack bug tracking application built with React, Node.js, Express, and MongoDB. It provides role-based workflows for administrators, testers, and developers to report, view, assign, update, and track software bugs.
-
----
+<div align="center">
 
 # CtrlX_Error
+
+### Full-Stack Bug Tracking & Team Collaboration Platform
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-success?style=for-the-badge)](https://ctrl-x-error.vercel.app/)
-[![Figma Design](https://img.shields.io/badge/Figma-UI%2FUX%20Design-F24E1E?style=for-the-badge&logo=figma&logoColor=white)](https://www.figma.com/design/wF8zt2Kh5jmG3qMGbCKIPv/Smriti?node-id=0-1)
+[![CI](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml/badge.svg)](https://github.com/Rishy-09/CtrlX_Error/actions/workflows/ci.yml)
+[![Figma Design](https://img.shields.io/badge/Figma-UI%2FUX-F24E1E?style=for-the-badge&logo=figma&logoColor=white)](https://www.figma.com/design/wF8zt2Kh5jmG3qMGbCKIPv/Smriti?node-id=0-1)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-5-black?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
 
+**A MERN-based issue-management system with role-based workflows for administrators, testers, and developers — including dashboards, reporting, secure uploads, team chat, and optional AI-assisted conversations.**
+
+</div>
 
 ---
 
-## Table of Contents
+## Overview
 
-- [Project Overview](#project-overview)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Repository Structure](#repository-structure)
-- [System Architecture](#system-architecture)
-- [Frontend Architecture](#frontend-architecture)
-- [Backend Architecture](#backend-architecture)
-- [Request Lifecycle](#request-lifecycle)
-- [Authentication & Authorization](#authentication--authorization)
-- [Database](#database)
-- [API Overview](#api-overview)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Configuration](#configuration)
-- [Error Handling](#error-handling)
-- [Security](#security)
-- [Screenshots](#screenshots)
-- [Future Improvements](#future-improvements)
-- [Contributing](#contributing)
-- [License](#license)
-- [Authors](#authors)
+**CtrlX_Error** is a full-stack bug tracking and project collaboration application designed around the software-testing lifecycle.
 
----
+The platform separates responsibilities across three roles:
 
-## Project Overview
+| Role | Primary Workflow |
+| --- | --- |
+| **Administrator** | Manage users and bugs, monitor dashboards, assign work, export reports |
+| **Tester** | Report bugs, inspect issues, monitor submitted bugs |
+| **Developer** | Review assigned bugs, update status and checklist progress |
 
-CtrlX_Error is designed to support software issue management through separate workflows for testers, developers, and administrators.
+The system combines a **React/Vite frontend**, **Express REST API**, **MongoDB/Mongoose persistence**, **JWT authentication**, role-based authorization, Excel reporting, secure file uploads, chat, and optional OpenRouter-powered AI responses.
 
-The application allows testers to report bugs, developers to review assigned bugs and update progress, and administrators to monitor bug activity, manage users, manage bugs, and export reports.
+### Application Flow
 
-The motivation behind the project is to provide a structured system for tracking bugs across a development workflow, including assignment, status tracking, checklist progress, dashboards, reports, and team communication.
-
-Intended users:
-
-- Administrators who manage users, bugs, dashboards, and exports.
-- Testers who report and review bugs they created.
-- Developers who work on assigned bugs and update status/checklist progress.
+```text
+Tester reports bug
+       ↓
+Admin reviews / manages issue
+       ↓
+Developer receives assignment
+       ↓
+Checklist + status updates
+       ↓
+Dashboards / reports reflect progress
+       ↓
+Team collaboration through chat
+```
 
 ---
 
 ## Key Features
 
-### Authentication and User Access
+### Authentication & Role-Based Access
 
-- User registration.
-- User login.
-- JWT-based authentication.
-- Password hashing with bcrypt.
-- Authenticated user profile retrieval.
-- Authenticated profile update.
-- Role selection during signup.
-- Admin registration protected by an invite token.
+- User registration and login
+- JWT-based authentication
+- bcrypt password hashing
+- Authenticated profile retrieval and updates
+- Role-aware frontend routing
+- Backend role authorization
+- Admin registration protected by an invite token
+- Authentication checks for profile-image uploads
+- Deleted/non-existent users rejected even when an old JWT remains valid
 
-### Role-Based Workflows
+Supported roles:
 
-- Admin dashboard and management views.
-- Tester dashboard and bug reporting views.
-- Developer dashboard and assigned bug views.
-- Frontend route protection by role.
-- Backend route protection by role.
+```text
+admin · tester · developer
+```
 
 ### Bug Management
 
-- Tester-created bug reports.
-- Bug listing with role-based visibility.
-- Bug detail views.
-- Bug update support.
-- Admin bug deletion.
-- Developer assigned bug list.
-- Developer checklist updates.
-- Developer bug status updates.
-- Bug status summary counts.
-- Bug dashboard statistics by role.
+- Create and manage bug reports
+- Role-filtered bug visibility
+- Detailed bug views
+- Priority and severity classification
+- Developer assignment
+- Due dates and modules
+- Status tracking
+- Developer checklists
+- Bug update history
+- Admin deletion controls
+- Role-specific dashboard statistics
 
-### Bug Data Fields
+Bug classification includes:
 
-- Title.
-- Description.
-- Priority: `Low`, `Medium`, `High`.
-- Severity: `Minor`, `Major`, `Critical`.
-- Status: `Open`, `In Progress`, `Closed`.
-- Due date.
-- Module.
-- Created by user.
-- Assigned developers.
-- Attachments as stored links/paths.
-- Checklist items.
-- Update history field in the schema.
+```text
+Priority: Low · Medium · High
+Severity: Minor · Major · Critical
+Status:   Open · In Progress · Closed
+```
 
-### Dashboards and Visualization
+### Dashboards & Reporting
 
-- Admin dashboard statistics.
-- Tester dashboard statistics.
-- Developer dashboard statistics.
-- Bug status distribution charts.
-- Bug priority/severity chart components.
-- Recent bug tables.
+- Admin dashboard
+- Tester dashboard
+- Developer dashboard
+- Bug-status summaries
+- Priority/severity visualization
+- Recent-bug tables
+- Excel bug-report exports
+- Excel user/bug summary exports
 
-### Reports
+### Team Chat
 
-- Excel export for bug reports.
-- Excel export for user/bug summary reports.
+- Create and manage chats
+- Chat participants and administrators
+- Send and retrieve messages
+- Paginated message history
+- Read tracking
+- Message attachments
+- Optional AI-assistant responses through OpenRouter
 
-### Chat
+Chat attachments are authenticated and restricted to supported file types with upload-size limits.
 
-- Create chats.
-- List chats for the current user.
-- View chat details.
-- Update chat settings by chat admin.
-- Delete chats by chat admin.
-- Send messages.
-- Paginated message retrieval.
-- Message read tracking.
-- Chat participants and chat admins.
-- Chat attachment upload route.
-- Optional AI assistant response support through OpenRouter.
+### Secure Uploads
 
-### Frontend UI
+Profile-image and chat upload flows include authentication and upload restrictions.
 
-- Landing page.
-- Login and signup pages.
-- Role-specific dashboards.
-- Bug cards and bug tables.
-- Reusable modals.
-- Reusable form inputs.
-- Charts built with Recharts.
-- Toast notifications.
-- Responsive dashboard navigation.
+Runtime uploads are stored under:
+
+```text
+backend/uploads/
+```
+
+Generated upload files are excluded from version control.
+
+### Frontend
+
+- Responsive landing page
+- Login and signup
+- Role-specific dashboards
+- Bug cards and tables
+- Reusable form components and modals
+- Recharts visualizations
+- Toast notifications
+- Shared chat interface
+- Protected routes
+- Vercel Speed Insights
 
 ---
 
@@ -150,14 +146,47 @@ Intended users:
 
 | Area | Technologies |
 | --- | --- |
-| Frontend | React 19, React DOM, React Router DOM, Tailwind CSS |
-| Backend | Node.js, Express 5 |
-| Database | MongoDB, Mongoose |
-| Authentication | JWT, bcryptjs |
-| APIs | REST APIs with Express routes and Axios clients |
-| State Management | React Context API for user and chat state |
-| Build Tools | Vite, ESLint, Nodemon |
-| Other Libraries | Recharts, Moment, date-fns, React Icons, React Hot Toast, Multer, ExcelJS, dotenv, cors, Axios, Vercel Speed Insights |
+| **Frontend** | React 19, Vite, React Router, Tailwind CSS |
+| **Backend** | Node.js, Express 5 |
+| **Database** | MongoDB, Mongoose |
+| **Authentication** | JWT, bcryptjs |
+| **API Client** | Axios |
+| **State** | React Context API |
+| **Charts** | Recharts |
+| **Uploads** | Multer |
+| **Reports** | ExcelJS |
+| **AI Integration** | OpenRouter |
+| **Deployment** | Vercel frontend |
+| **Automation** | GitHub Actions |
+| **License** | GNU GPL v3 |
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    U["User Browser"]
+    F["React + Vite Frontend"]
+    B["Express API"]
+    M[("MongoDB")]
+    UP["Secure Upload Storage"]
+    R["Excel Reports"]
+    AI["OpenRouter API"]
+
+    U --> F
+    F -->|"REST + JWT"| B
+    B -->|"Mongoose"| M
+    B --> UP
+    B --> R
+    B -->|"Optional AI Chat"| AI
+```
+
+The frontend handles application state, protected navigation, forms, dashboards, and API communication.
+
+The Express backend performs authentication, authorization, validation, bug operations, user operations, reporting, chat handling, uploads, and external-service integration.
+
+MongoDB stores persistent application data through Mongoose models.
 
 ---
 
@@ -165,576 +194,403 @@ Intended users:
 
 ```text
 CtrlX_Error/
-├── README.md
+│
+├── .github/
+│   ├── workflows/
+│   │   └── ci.yml
+│   └── pull_request_template.md
+│
 ├── backend/
 │   ├── config/
 │   │   └── db.js
+│   │
 │   ├── controllers/
 │   │   ├── authController.js
 │   │   ├── bugController.js
 │   │   ├── chatController.js
 │   │   ├── reportController.js
 │   │   └── userController.js
+│   │
 │   ├── middlewares/
 │   │   ├── auth.js
 │   │   ├── authmiddleware.js
 │   │   └── uploadMiddleware.js
+│   │
 │   ├── models/
 │   │   ├── Bug.js
 │   │   ├── Chat.js
 │   │   ├── Message.js
 │   │   └── User.js
+│   │
 │   ├── routes/
 │   │   ├── authRoutes.js
 │   │   ├── bugRoutes.js
 │   │   ├── chatRoutes.js
 │   │   ├── reportRoutes.js
 │   │   └── userRoutes.js
+│   │
 │   ├── services/
 │   │   └── aiService.js
+│   │
 │   ├── uploads/
+│   │   └── .gitkeep
+│   │
 │   ├── package.json
 │   └── server.js
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   │   ├── Cards/
+│   │   │   ├── Charts/
+│   │   │   ├── Inputs/
+│   │   │   ├── chat/
+│   │   │   └── layouts/
+│   │   ├── context/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   │   ├── Admin/
+│   │   │   ├── Auth/
+│   │   │   ├── Developer/
+│   │   │   └── Tester/
+│   │   ├── routes/
+│   │   ├── utils/
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── package.json
+│   ├── vercel.json
+│   └── vite.config.js
+│
 ├── docs/
-└── frontend/
-    ├── public/
-    ├── src/
-    │   ├── assets/
-    │   ├── components/
-    │   │   ├── Cards/
-    │   │   ├── Charts/
-    │   │   ├── Inputs/
-    │   │   ├── chat/
-    │   │   └── layouts/
-    │   ├── context/
-    │   ├── hooks/
-    │   ├── pages/
-    │   │   ├── Admin/
-    │   │   ├── Auth/
-    │   │   ├── Developer/
-    │   │   └── Tester/
-    │   ├── routes/
-    │   ├── utils/
-    │   ├── App.jsx
-    │   ├── index.css
-    │   └── main.jsx
-    ├── eslint.config.js
-    ├── index.html
-    ├── package.json
-    ├── vercel.json
-    └── vite.config.js
+├── screenshots/
+├── .env.example
+├── CONTRIBUTING.md
+├── LICENSE
+└── README.md
 ```
-
-### Major Directory Purposes
-
-| Directory | Purpose |
-| --- | --- |
-| `backend/` | Express API server, database models, controllers, middleware, routes, services, and uploads. |
-| `backend/config/` | MongoDB connection setup. |
-| `backend/controllers/` | Request handling and application business logic. |
-| `backend/middlewares/` | JWT verification, role authorization, and file upload handling. |
-| `backend/models/` | Mongoose schemas and models. |
-| `backend/routes/` | API route definitions grouped by module. |
-| `backend/services/` | External service integration, currently OpenRouter AI response handling. |
-| `backend/uploads/` | Uploaded files served through the backend. |
-| `frontend/` | React/Vite single-page application. |
-| `frontend/public/` | Public static assets. |
-| `frontend/src/assets/` | Application images. |
-| `frontend/src/components/` | Reusable UI, chart, input, layout, and chat components. |
-| `frontend/src/context/` | React Context providers for user and chat state. |
-| `frontend/src/hooks/` | Custom React hooks. |
-| `frontend/src/pages/` | Route-level pages grouped by user role. |
-| `frontend/src/routes/` | Private route guard. |
-| `frontend/src/utils/` | API paths, Axios configuration, utility functions, upload helper, and menu data. |
-| `docs/` | Project documents in PDF and spreadsheet formats. |
-
----
-
-## System Architecture
-
-CtrlX_Error uses a client-server architecture.
-
-The frontend is a React single-page application. It manages authentication state, chat state, protected routes, UI rendering, form submission, and API communication.
-
-The backend is an Express API server. It handles authentication, authorization, bug operations, user operations, report exports, chat operations, file uploads, and AI assistant integration.
-
-MongoDB stores users, bugs, chats, and messages through Mongoose models.
-
-```mermaid
-flowchart LR
-    User[User Browser] --> Frontend[React + Vite Frontend]
-    Frontend -->|REST API requests with JWT| Backend[Express API Server]
-    Backend -->|Mongoose queries| MongoDB[(MongoDB)]
-    Backend -->|Static files| Uploads[Uploads Directory]
-    Backend -->|Excel generation| Reports[Excel Reports]
-    Backend -->|Optional chat AI response| OpenRouter[OpenRouter API]
-
-    Frontend --> UserContext[User Context]
-    Frontend --> ChatContext[Chat Context]
-
-    Backend --> AuthRoutes[Auth Routes]
-    Backend --> UserRoutes[User Routes]
-    Backend --> BugRoutes[Bug Routes]
-    Backend --> ReportRoutes[Report Routes]
-    Backend --> ChatRoutes[Chat Routes]
-```
-
----
-
-## Frontend Architecture
-
-The frontend is organized as a Vite React application.
-
-### Entry Point
-
-- `src/main.jsx` mounts the React application.
-- `UserProvider` supplies authenticated user state.
-- `ChatProvider` supplies chat state.
-- `SpeedInsights` is included for Vercel Speed Insights.
-
-### Routing
-
-Routes are defined in `src/App.jsx` with `react-router-dom`.
-
-Public routes:
-
-- `/landing`
-- `/login`
-- `/signup`
-- `/`
-
-Admin routes:
-
-- `/admin/dashboard`
-- `/admin/bugs`
-- `/admin/bugs/:id`
-- `/admin/users`
-- `/admin/create-bug`
-- `/admin/chats`
-
-Tester routes:
-
-- `/tester/dashboard`
-- `/tester/report-bug`
-- `/tester/bug/:id`
-- `/tester/my-bugs`
-- `/tester/all-bugs`
-- `/tester/chats`
-
-Developer routes:
-
-- `/developer/dashboard`
-- `/developer/assigned-bugs`
-- `/developer/update-bugs`
-- `/developer/assigned-bugs/:id`
-- `/developer/chats`
-
-### Pages
-
-Pages are grouped by role under `src/pages/`:
-
-- `Auth/`: Login and signup.
-- `Admin/`: Admin dashboard, bug management, user management, admin bug view.
-- `Tester/`: Tester dashboard, bug creation, bug lists, bug details.
-- `Developer/`: Developer dashboard, assigned bugs, status updates, assigned bug details.
-- `ChatPage.jsx`: Shared chat page used by all roles.
-- `LandingPage.jsx`: Public landing page.
-
-### Components
-
-Reusable components are grouped by responsibility:
-
-- `Cards/`: Bug, info, and user cards.
-- `Charts/`: Recharts-based bar and pie charts.
-- `Inputs/`: Form inputs, selectors, user assignment, checklist, and attachment inputs.
-- `layouts/`: Auth layout, dashboard layout, navbar, side menu.
-- `chat/`: Chat sidebar, messages, input, create modal, settings modal.
-
-### State Management
-
-The frontend uses React Context:
-
-- `UserContext` manages authenticated user, token loading, user updates, and logout cleanup.
-- `ChatContext` manages chat list, active chat, messages, chat loading states, errors, pagination, creation, updates, deletion, and sending messages.
-
-### API Communication
-
-- `utils/axiosInstance.js` defines a shared Axios client using `http://localhost:8000`.
-- The Axios request interceptor attaches `Authorization: Bearer <token>` from `localStorage`.
-- The Axios response interceptor handles `401` responses by clearing the token and redirecting to `/login`.
-- `utils/apiPaths.js` centralizes most API paths.
-- `ChatContext` uses a separate Axios client with `import.meta.env.VITE_API_URL || "http://localhost:8000/api"`.
 
 ---
 
 ## Backend Architecture
 
-The backend is an Express application using ES modules.
-
-### Routes
-
-Routes are grouped by feature:
-
-- `authRoutes.js`: Registration, login, profile, image upload.
-- `userRoutes.js`: User listing, developer listing, user lookup.
-- `bugRoutes.js`: Bug dashboards, bug CRUD, assigned bugs, status updates, checklist updates.
-- `reportRoutes.js`: Excel report exports.
-- `chatRoutes.js`: Chat and message operations.
-
-### Controllers
-
-Controllers contain request handling logic:
-
-- `authController.js`: User registration, login, token generation, profile retrieval, profile update.
-- `userController.js`: User lists, user lookup, developer lookup.
-- `bugController.js`: Bug lifecycle, dashboards, role-filtered queries, status/checklist updates.
-- `reportController.js`: Excel workbook generation for bugs and users.
-- `chatController.js`: Chat CRUD, message CRUD, pagination, read tracking, AI assistant response handling.
-
-### Middleware
-
-- `authmiddleware.js`: Main JWT protection and role-based middleware.
-- `auth.js`: JWT verification middleware used by chat routes.
-- `uploadMiddleware.js`: Image upload middleware for profile images.
-
-### Models
-
-- `User`: User account and role data.
-- `Bug`: Bug details, assignment, checklist, attachments, status, and update history.
-- `Chat`: Chat metadata, participants, admins, AI assistant settings.
-- `Message`: Chat messages, attachments, mentions, replies, reactions, read tracking.
-
-### Services
-
-- `aiService.js`: Formats chat messages and calls OpenRouter for optional AI assistant responses.
-
-### Utilities
-
-- Backend utility logic is contained in route/controller/service files.
-- MongoDB connection is handled by `config/db.js`.
-- Static file serving is configured in `server.js` for `/uploads`.
+The Express backend follows a route → middleware → controller → model structure.
 
 ```mermaid
-flowchart TB
-    Server[server.js]
-    Server --> Routes[Routes]
-    Server --> DB[config/db.js]
-    Server --> StaticUploads[/uploads static serving]
+flowchart TD
+    S["server.js"]
+    ROUTES["API Routes"]
+    AUTH["Authentication / Authorization"]
+    CTRL["Controllers"]
+    MODEL["Mongoose Models"]
+    DB[("MongoDB")]
 
-    Routes --> AuthRoutes[authRoutes]
-    Routes --> UserRoutes[userRoutes]
-    Routes --> BugRoutes[bugRoutes]
-    Routes --> ReportRoutes[reportRoutes]
-    Routes --> ChatRoutes[chatRoutes]
+    S --> ROUTES
+    ROUTES --> AUTH
+    AUTH --> CTRL
+    CTRL --> MODEL
+    MODEL --> DB
+```
 
-    AuthRoutes --> AuthController[authController]
-    UserRoutes --> UserController[userController]
-    BugRoutes --> BugController[bugController]
-    ReportRoutes --> ReportController[reportController]
-    ChatRoutes --> ChatController[chatController]
+### Route Groups
 
-    Routes --> Middleware[Auth and Role Middleware]
-    AuthRoutes --> UploadMiddleware[uploadMiddleware]
-    ChatRoutes --> ChatUpload[Multer chat uploads]
+| Module | Base Route | Purpose |
+| --- | --- | --- |
+| Authentication | `/api/auth` | Registration, login, profiles, profile uploads |
+| Users | `/api/users` | User/developer discovery and management |
+| Bugs | `/api/bugs` | Dashboards, CRUD, assignments, status/checklists |
+| Reports | `/api/reports` | Excel exports |
+| Chat | `/api/chats` | Chats, messages and attachments |
 
-    AuthController --> UserModel[User Model]
-    UserController --> UserModel
-    UserController --> BugModel[Bug Model]
-    BugController --> BugModel
-    ReportController --> BugModel
-    ReportController --> UserModel
-    ChatController --> ChatModel[Chat Model]
-    ChatController --> MessageModel[Message Model]
-    ChatController --> UserModel
-    ChatController --> AIService[aiService]
+---
+
+## Frontend Architecture
+
+The frontend is a React single-page application built with Vite.
+
+### State
+
+React Context is used for:
+
+- authenticated user state
+- token/session handling
+- chat list and active chat
+- message state
+- chat loading/error states
+
+### Routing
+
+Public routes include:
+
+```text
+/
+/landing
+/login
+/signup
+```
+
+Role-specific areas include:
+
+```text
+/admin/*
+/tester/*
+/developer/*
+```
+
+Protected routes validate the current authenticated user and allowed roles before rendering restricted pages.
+
+### API Communication
+
+Axios handles frontend-to-backend communication.
+
+Authenticated requests attach:
+
+```http
+Authorization: Bearer <token>
+```
+
+`401` responses trigger session cleanup and redirect the user to login.
+
+The chat API base URL can be configured through:
+
+```env
+VITE_API_URL=http://localhost:8000/api
 ```
 
 ---
 
 ## Request Lifecycle
 
-An authenticated API request follows this flow:
-
-1. The user interacts with a React page or component.
-2. The frontend sends an Axios request to the backend.
-3. The JWT token is attached as a `Bearer` token.
-4. Backend authentication middleware verifies the token.
-5. Role middleware checks access where configured.
-6. The route calls the appropriate controller.
-7. The controller performs validation and business logic.
-8. Mongoose reads or writes MongoDB documents.
-9. The backend returns JSON or a file response.
-10. The frontend updates state and renders the result.
-
 ```mermaid
 sequenceDiagram
     participant U as User
     participant F as React Frontend
-    participant A as Axios Client
-    participant M as Auth/Role Middleware
+    participant A as Axios
+    participant M as Auth / Role Middleware
     participant C as Controller
     participant D as MongoDB
 
-    U->>F: Interacts with page
-    F->>A: Sends API request
-    A->>M: Request with Authorization header
-    M->>M: Verify JWT and role
-    M->>C: Forward authorized request
-    C->>D: Query or update data
-    D-->>C: Return result
-    C-->>A: JSON or file response
-    A-->>F: Response data
-    F-->>U: Updated UI
+    U->>F: Perform action
+    F->>A: Create API request
+    A->>M: Request + Bearer JWT
+    M->>M: Verify user and role
+    M->>C: Authorized request
+    C->>D: Read / update data
+    D-->>C: Result
+    C-->>A: JSON / file response
+    A-->>F: Response
+    F-->>U: Updated interface
 ```
 
 ---
 
 ## Authentication & Authorization
 
-Authentication uses JWT.
+Authentication uses signed JWTs.
 
-During login or registration, the backend returns a signed JWT with a `7d` expiry. The frontend stores the token in `localStorage`. Authenticated API requests include the token in the `Authorization` header.
+During login or registration:
 
-Passwords are hashed with bcrypt before storage.
+1. User credentials are validated.
+2. Passwords are hashed or compared using bcrypt.
+3. The backend creates a JWT.
+4. The frontend stores the token.
+5. Protected requests send the token in the `Authorization` header.
+6. Backend middleware verifies the token.
+7. The corresponding user is loaded from MongoDB.
+8. Requests from deleted/non-existent users are rejected.
+9. Role middleware applies additional authorization where required.
 
-Authorization is role-based. Supported roles are:
+The current roles are:
 
-- `admin`
-- `tester`
-- `developer`
-
-Backend authorization middleware includes:
-
-- `adminOnly`
-- `testerOnly`
-- `developerOnly`
-- `authorizeRoles(...roles)`
-
-Frontend authorization is handled through `PrivateRoute`, which checks the current user and allowed roles before rendering protected routes.
-
-```mermaid
-flowchart TD
-    Start[User submits login or registration] --> Backend[Auth Controller]
-    Backend --> Validate[Validate user data or credentials]
-    Validate --> Password[Hash or compare password with bcrypt]
-    Password --> Token[Generate JWT]
-    Token --> Client[Return user data and token]
-    Client --> Store[Store token in localStorage]
-    Store --> Request[Send protected API request]
-    Request --> Verify[Verify JWT middleware]
-    Verify --> RoleCheck[Check route role middleware]
-    RoleCheck --> Allowed[Run controller]
-    RoleCheck --> Denied[Return 403 if role is not allowed]
+```text
+admin
+tester
+developer
 ```
 
 ---
 
 ## Database
 
-The application uses MongoDB with Mongoose.
-
-### Models
+MongoDB persistence is implemented with Mongoose.
 
 | Model | Purpose |
 | --- | --- |
-| `User` | Stores user account details, hashed password, profile image URL, and role. |
-| `Bug` | Stores bug information, assigned developers, creator, checklist, status, attachments, and update history. |
-| `Chat` | Stores chat metadata, participants, admins, last message, and AI assistant configuration. |
-| `Message` | Stores chat messages, sender, attachments, mentions, replies, reactions, deletion state, AI flag, and read tracking. |
+| `User` | Account, role and profile information |
+| `Bug` | Issue details, assignment, checklist, status, attachments and history |
+| `Chat` | Participants, admins, metadata and AI settings |
+| `Message` | Messages, attachments, replies, reactions and read state |
 
 ### Relationships
-
-- A `Bug` references a `User` through `createdBy`.
-- A `Bug` references one or more assigned `User` documents through `assignedTo`.
-- A `Chat` references users through `participants` and `admins`.
-- A `Chat` references a `Message` through `lastMessage`.
-- A `Message` references a `Chat`.
-- A `Message` references a `User` through `sender`, `mentions`, `reactions.user`, and `readBy.user`.
-- A `Message` can reference another `Message` through `replyTo`.
-
-### Persistence Flow
-
-Data is persisted by controllers using Mongoose models. The backend connects to MongoDB during server startup through `connectDB()` in `backend/config/db.js`.
 
 ```mermaid
 erDiagram
     USER ||--o{ BUG : creates
     USER ||--o{ BUG : assigned_to
     USER ||--o{ CHAT : participates_in
-    USER ||--o{ CHAT : administers
     CHAT ||--o{ MESSAGE : contains
-    MESSAGE ||--o{ MESSAGE : replies_to
     USER ||--o{ MESSAGE : sends
-    USER ||--o{ MESSAGE : reads
-
-    USER {
-        string name
-        string email
-        string password
-        string profileImageURL
-        string role
-    }
-
-    BUG {
-        string title
-        string description
-        string priority
-        string severity
-        string status
-        date dueDate
-        string module
-        array attachments
-        array checklist
-    }
-
-    CHAT {
-        string name
-        string type
-        array participants
-        array admins
-        object aiAssistant
-    }
-
-    MESSAGE {
-        string content
-        array attachments
-        array mentions
-        array reactions
-        boolean isDeleted
-        boolean isAIMessage
-    }
+    MESSAGE ||--o{ MESSAGE : replies_to
 ```
 
 ---
 
 ## API Overview
 
-### Auth APIs
+### Authentication
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/api/auth/register` | Public | Register a user. |
-| `POST` | `/api/auth/login` | Public | Authenticate a user and return a token. |
-| `GET` | `/api/auth/profile` | Private | Get current user profile. |
-| `PUT` | `/api/auth/profile` | Private | Update current user profile. |
-| `POST` | `/api/auth/upload-image` | Public in route definition | Upload a profile image. |
+| `POST` | `/api/auth/register` | Public | Register user |
+| `POST` | `/api/auth/login` | Public | Authenticate user |
+| `GET` | `/api/auth/profile` | Private | Retrieve current profile |
+| `PUT` | `/api/auth/profile` | Private | Update current profile |
+| `POST` | `/api/auth/upload-image` | **Private** | Upload profile image |
 
-### User APIs
-
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/api/users` | Admin | Get all users with bug stats. |
-| `GET` | `/api/users/developers` | Admin, Tester | Get all developers. |
-| `GET` | `/api/users/:id` | Private | Get user by ID. |
-
-### Bug APIs
+### Users
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/bugs/admin-dashboard` | Admin | Get admin dashboard data. |
-| `GET` | `/api/bugs/tester-dashboard` | Tester | Get tester dashboard data. |
-| `GET` | `/api/bugs/developer-dashboard` | Developer | Get developer dashboard data. |
-| `GET` | `/api/bugs` | Private | Get role-filtered bugs. |
-| `GET` | `/api/bugs/all-viewable` | Private | Get bugs visible to current user. |
-| `GET` | `/api/bugs/user/:userId` | Private | Get bugs created by a user. |
-| `GET` | `/api/bugs/assigned` | Developer | Get bugs assigned to current developer. |
-| `GET` | `/api/bugs/:id` | Private | Get bug by ID. |
-| `POST` | `/api/bugs` | Tester | Create a bug. |
-| `PUT` | `/api/bugs/:id` | Private | Update a bug. |
-| `DELETE` | `/api/bugs/:id` | Admin | Delete a bug. |
-| `PUT` | `/api/bugs/:id/status` | Developer | Update bug status. |
-| `PUT` | `/api/bugs/:id/checklist` | Developer | Update bug checklist. |
+| `GET` | `/api/users` | Admin | Get users and bug statistics |
+| `GET` | `/api/users/developers` | Admin / Tester | Get developers |
+| `GET` | `/api/users/:id` | Private | Get user |
 
-### Report APIs
+### Bugs
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/api/reports/export/bugs` | Admin | Export bug report as Excel. |
-| `GET` | `/api/reports/export/users` | Admin | Export user report as Excel. |
+| `GET` | `/api/bugs/admin-dashboard` | Admin | Admin dashboard |
+| `GET` | `/api/bugs/tester-dashboard` | Tester | Tester dashboard |
+| `GET` | `/api/bugs/developer-dashboard` | Developer | Developer dashboard |
+| `GET` | `/api/bugs` | Private | Role-filtered bugs |
+| `GET` | `/api/bugs/all-viewable` | Private | Bugs visible to user |
+| `GET` | `/api/bugs/user/:userId` | Private | Bugs created by user |
+| `GET` | `/api/bugs/assigned` | Developer | Assigned bugs |
+| `GET` | `/api/bugs/:id` | Private | Bug details |
+| `POST` | `/api/bugs` | Tester | Create bug |
+| `PUT` | `/api/bugs/:id` | Private | Update bug |
+| `DELETE` | `/api/bugs/:id` | Admin | Delete bug |
+| `PUT` | `/api/bugs/:id/status` | Developer | Update status |
+| `PUT` | `/api/bugs/:id/checklist` | Developer | Update checklist |
 
-### Chat APIs
+### Reports
 
-All chat routes require JWT verification.
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/reports/export/bugs` | Admin | Export bug report |
+| `GET` | `/api/reports/export/users` | Admin | Export user report |
+
+### Chat
+
+All chat routes require authentication.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/chats` | Create a chat. |
-| `GET` | `/api/chats` | Get chats for current user. |
-| `GET` | `/api/chats/:id` | Get chat by ID. |
-| `PUT` | `/api/chats/:id` | Update chat settings. |
-| `DELETE` | `/api/chats/:id` | Delete a chat. |
-| `POST` | `/api/chats/:id/messages` | Send a message. |
-| `GET` | `/api/chats/:id/messages` | Get paginated messages. |
+| `POST` | `/api/chats` | Create chat |
+| `GET` | `/api/chats` | Get current user's chats |
+| `GET` | `/api/chats/:id` | Get chat |
+| `PUT` | `/api/chats/:id` | Update chat |
+| `DELETE` | `/api/chats/:id` | Delete chat |
+| `POST` | `/api/chats/:id/messages` | Send message / attachments |
+| `GET` | `/api/chats/:id/messages` | Retrieve messages |
+
+Chat attachments currently accept:
+
+```text
+JPEG · PNG · WebP · PDF · plain text
+```
+
+with a maximum of **5 attachments** and **5 MB per file**.
 
 ---
 
-## Installation
+## Quick Start
 
 ### Prerequisites
 
-- Node.js
+- Node.js 20 recommended
 - npm
-- MongoDB database connection string
+- MongoDB connection
 
-### Clone
+### 1. Clone
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Rishy-09/CtrlX_Error.git
 cd CtrlX_Error
 ```
 
-### Install Backend Dependencies
+### 2. Install backend dependencies
 
 ```bash
 cd backend
 npm install
 ```
 
-### Install Frontend Dependencies
+### 3. Install frontend dependencies
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-### Environment Variables
+---
 
-Create a `.env` file in the `backend/` directory.
+## Environment Configuration
+
+Use [`.env.example`](.env.example) as the reference for local configuration.
+
+Create the required local environment file without committing real secrets.
+
+Typical configuration includes:
 
 ```env
-PORT=8000
-MONGO_URI=mongodb://localhost:27017/bugtracker
-JWT_SECRET=your_jwt_secret
-ADMIN_INVITE_TOKEN=your_admin_invite_token
-OPENROUTER_API_KEY=your_openrouter_api_key
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/ctrlx_error
+JWT_SECRET=replace-with-a-strong-secret
+ADMIN_INVITE_TOKEN=replace-with-an-admin-invite-token
+
+CLIENT_ORIGINS=http://localhost:5173,http://localhost:3000
+
+OPENROUTER_API_KEY=
 APPLICATION_URL=http://localhost:5000
+
+VITE_API_URL=http://localhost:5000
 ```
 
-If using the chat frontend with a non-default backend URL, configure the frontend environment with:
+### CORS
+
+`CLIENT_ORIGINS` controls which frontend origins may access the backend.
+
+Multiple origins can be supplied as a comma-separated list:
 
 ```env
-VITE_API_URL=http://localhost:8000/api
+CLIENT_ORIGINS=http://localhost:5173,https://your-frontend.example.com
 ```
 
-### Run Backend
+Requests from tools without an `Origin` header, such as curl or Postman, remain usable for development/API testing.
 
-Development mode:
+> Never commit `.env` files, JWT secrets, database credentials, API keys, or admin invite tokens.
+
+---
+
+## Running Locally
+
+### Backend
 
 ```bash
 cd backend
 npm run dev
 ```
 
-Production start command:
+Production-style start:
 
 ```bash
-cd backend
 npm start
 ```
 
-### Run Frontend
-
-Development mode:
+### Frontend
 
 ```bash
 cd frontend
@@ -744,195 +600,214 @@ npm run dev
 Production build:
 
 ```bash
-cd frontend
 npm run build
 ```
 
-Preview production build locally:
+Preview:
 
 ```bash
-cd frontend
 npm run preview
 ```
 
 ---
 
-## Environment Variables
-
-| Variable | Used By | Required For | Purpose |
-| --- | --- | --- | --- |
-| `PORT` | Backend | Server startup | Defines the backend server port. |
-| `MONGO_URI` | Backend | Database connection | MongoDB connection string. |
-| `JWT_SECRET` | Backend | Authentication | Secret used to sign and verify JWTs. |
-| `ADMIN_INVITE_TOKEN` | Backend | Admin registration | Token required to register an admin user. |
-| `OPENROUTER_API_KEY` | Backend | Chat AI assistant | API key for OpenRouter integration. |
-| `APPLICATION_URL` | Backend | OpenRouter request headers | Referer value sent to OpenRouter; defaults in code if not set. |
-| `VITE_API_URL` | Frontend | Chat API client | Base API URL used by `ChatContext`; defaults to `http://localhost:8000/api`. |
-
----
-
-## Configuration
-
-| File | Purpose |
-| --- | --- |
-| `backend/package.json` | Backend scripts and dependencies. |
-| `backend/server.js` | Express app setup, CORS, JSON parsing, route mounting, uploads static serving, server start. |
-| `backend/config/db.js` | MongoDB connection setup. |
-| `frontend/package.json` | Frontend scripts and dependencies. |
-| `frontend/vite.config.js` | Vite, React, Tailwind plugin setup, build output, source map, and dev server settings. |
-| `frontend/eslint.config.js` | ESLint configuration for JavaScript and JSX files. |
-| `frontend/vercel.json` | Vercel SPA rewrite configuration to route all paths to `index.html`. |
-| `frontend/src/utils/axiosInstance.js` | Shared Axios base URL, timeout, request interceptor, and response interceptor. |
-| `frontend/src/utils/apiPaths.js` | Centralized frontend API path definitions. |
-
----
-
-## Error Handling
-
-Backend controllers use `try/catch` blocks and return JSON error responses with HTTP status codes such as `400`, `401`, `403`, `404`, and `500`.
-
-Examples of handled errors include:
-
-- Duplicate user registration.
-- Invalid login credentials.
-- Missing or invalid JWT token.
-- Unauthorized role access.
-- Missing bug fields.
-- Invalid priority or severity values.
-- Missing bug or chat records.
-- Invalid chat IDs.
-- Failed report exports.
-- Failed AI assistant responses.
-
-Frontend error handling includes:
-
-- Axios response interception for `401` responses.
-- Console logging for API errors.
-- Toast notifications in multiple bug, dashboard, report, and chat flows.
-- Local form validation in login, signup, and bug creation pages.
-- Loading states in dashboards, bug views, and chat views.
-
-No centralized backend error-handling middleware was found in the repository analysis.
-
----
-
 ## Security
 
-Implemented security mechanisms:
+CtrlX currently implements:
 
-- Password hashing with bcrypt before user storage.
-- JWT-based authentication.
-- Auth middleware for protected backend routes.
-- Role-based authorization middleware.
-- Frontend private route protection by role.
-- Admin registration requires `ADMIN_INVITE_TOKEN`.
-- MongoDB user queries exclude passwords in profile/user-fetch paths.
-- Image upload middleware for profile images restricts MIME types to JPEG/JPG/PNG.
+- bcrypt password hashing
+- JWT authentication
+- role-based authorization
+- protected frontend routes
+- admin registration invite token
+- authenticated profile-image uploads
+- authenticated chat routes
+- profile-image MIME validation
+- chat attachment MIME restrictions
+- chat attachment file-size limits
+- user-existence verification after JWT decoding
+- environment-controlled CORS
+- secrets through environment variables
+- runtime uploads excluded from Git
 
-Security considerations found during repository analysis:
+### Dependency Maintenance
 
-- CORS is configured with `origin: "*"`.
-- Tokens are stored in `localStorage`.
-- `/api/auth/upload-image` is not protected in the route definition.
-- Chat attachment uploads do not define file type or size restrictions in the route.
-- No rate limiting middleware was found.
-- No centralized input sanitization middleware was found.
+The frontend dependency audit currently resolves to **0 known vulnerabilities** after safe dependency updates.
+
+The backend dependency tree has also been substantially updated. A small number of moderate transitive findings may remain through the Excel export dependency chain.
+
+Breaking dependency upgrades are intentionally not forced without validation.
+
+### Current Security Considerations
+
+Potential future hardening includes:
+
+- request rate limiting
+- centralized input validation/sanitization
+- centralized Express error handling
+- moving browser authentication away from `localStorage` where appropriate
+- malware/content scanning for uploaded files
+- additional automated security testing
+
+---
+
+## Validation & CI
+
+GitHub Actions validates pushes and pull requests targeting `main`.
+
+### Frontend
+
+CI performs:
+
+```bash
+npm ci
+npm run build
+```
+
+### Backend
+
+CI performs dependency installation and JavaScript syntax validation across the backend source.
+
+Local frontend validation:
+
+```bash
+cd frontend
+npm run build
+```
+
+Local backend validation:
+
+```bash
+node --check backend/server.js
+
+find backend/controllers backend/middlewares backend/models backend/routes backend/services \
+  -type f -name "*.js" -print0 | xargs -0 -n1 node --check
+```
+
+The project currently contains some pre-existing ESLint cleanup debt, primarily unused variables and React Hook/Fast Refresh warnings. Lint is therefore not yet used as a blocking CI gate.
 
 ---
 
 ## Screenshots
 
-
 ### Landing Page
 
-![Placeholder for the public landing page screenshot](screenshots/image.png)
+![CtrlX landing page](screenshots/image.png)
 
 ### Authentication
 
-![Placeholder for login screenshot](screenshots/image2.png)
+![CtrlX login page](screenshots/image2.png)
 
 <br>
 
-![Placeholder for signup screenshot](screenshots/image3.png)
-### Admin Dashboard
+![CtrlX signup page](screenshots/image3.png)
 
-![Placeholder for the admin dashboard screenshot]()
-
-### Tester Workflow
-
-Placeholder for tester bug reporting and bug list screenshots.
-
-### Developer Workflow
-
-Placeholder for assigned bugs and status update screenshots.
-
-### Chat
-
-Placeholder for chat interface screenshot.
+Additional dashboard/chat screenshots can be added as the project evolves.
 
 ---
 
-## Future Improvements
+## Deployment
 
-These improvements are based on the current repository architecture and observed gaps:
+### Frontend
 
-- Add automated backend tests.
-- Add automated frontend tests.
-- Add centralized backend error-handling middleware.
-- Add request validation middleware for API boundaries.
-- Align frontend status names with backend status values.
-- Consolidate duplicate authentication middleware files.
-- Protect the profile image upload route.
-- Add file size and type validation for chat attachments.
-- Make frontend API base URLs consistently configurable.
-- Add pagination for bug list endpoints.
-- Add backend deployment configuration.
-- Add API documentation generated from actual backend routes.
-- Add seed or setup instructions for creating initial users.
+The React frontend includes Vercel SPA routing configuration and is deployed at:
+
+**https://ctrl-x-error.vercel.app/**
+
+### Backend
+
+The Express backend requires a Node.js-compatible deployment environment with:
+
+- MongoDB connectivity
+- configured environment variables
+- persistent or external upload storage where required
+
+Backend deployment infrastructure is intentionally environment-specific and is not currently committed as a platform-specific configuration.
+
+---
+
+## Current Maintenance Notes
+
+The repository has undergone a maintenance pass covering:
+
+- secure CORS configuration
+- authenticated profile uploads
+- restricted chat attachments
+- stronger JWT/user validation
+- dependency security updates
+- removal of committed runtime uploads
+- removal of duplicate/dead frontend code
+- environment configuration template
+- automated CI
+- contribution guidance
+
+Remaining non-critical maintenance opportunities include:
+
+- resolving existing frontend lint debt
+- consolidating duplicate authentication middleware
+- frontend code splitting to reduce the main production bundle
+- adding automated backend/frontend behavioral tests
+- centralized API validation
+- pagination improvements for large bug lists
+
+---
+
+## Future Work
+
+Potential extensions include:
+
+- automated backend API tests
+- frontend component/integration tests
+- centralized Express error handling
+- request-schema validation
+- rate limiting
+- consolidated authentication middleware
+- consistent environment-driven API configuration across all frontend clients
+- frontend lazy loading and code splitting
+- additional dashboard/chat screenshots
+- backend deployment templates
+- generated OpenAPI documentation
+- seed/setup tooling for development users
 
 ---
 
 ## Contributing
 
-Contributions are welcome through issues and pull requests.
+Contributions are welcome.
 
-Recommended workflow:
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development setup, validation, security guidance, and pull-request expectations.
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Install backend and frontend dependencies.
-4. Make changes in the relevant package.
-5. Run available lint/build commands.
-6. Verify role-based flows affected by the change.
-7. Open a pull request with a clear description of the change.
-
-Contribution guidelines:
-
-- Keep backend routes, controllers, models, and middleware separated by responsibility.
-- Keep frontend pages role-specific and shared UI in `components/`.
-- Do not document features that are not implemented.
-- Keep API paths synchronized between backend routes and `frontend/src/utils/apiPaths.js`.
-- Avoid introducing new status values unless backend schema and frontend views are updated together.
+A pull request template is also provided under `.github/`.
 
 ---
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0.
+CtrlX_Error is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 
-See the LICENSE file for details.
+See [`LICENSE`](LICENSE) for the complete license text.
 
 ---
 
 ## Authors
 
-Project contributors preserved from the repository documentation:
-
 | Contributor | Role | Contributions |
 | --- | --- | --- |
-| Soumya Jain | Frontend Developer | UI design, React pages, Figma design. |
-| Smriti Walia | QA & Research | Bug testing, UI layout, documentation. |
-| Amulya Jain | Integration & DevOps | Frontend-backend integration, fixes, middleware, versioning. |
-| Naman Chanana | Backend & Full-Stack Lead | Auth, email, database design, API testing. |
+| **Soumya Jain** | Frontend Developer | UI design, React pages, Figma design |
+| **Smriti Walia** | QA & Research | Bug testing, UI layout, documentation |
+| **Amulya Jain** | Integration & DevOps | Frontend/backend integration, fixes, middleware, versioning |
+| **Naman Chanana** | Backend & Full-Stack Lead | Authentication, backend APIs, database design, integration and testing |
 
-Additional contributors can be added here as the project evolves.
+---
+
+<div align="center">
+
+### CtrlX_Error
+
+**Track bugs · Assign work · Collaborate · Resolve**
+
+React · Express · MongoDB · JWT · Recharts · OpenRouter
+
+Licensed under GPL-3.0
+
+</div>

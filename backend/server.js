@@ -21,12 +21,27 @@ const __dirname = dirname(__filename);
 
 
 // Middleware to handle CORS
+const allowedOrigins = (
+  process.env.CLIENT_ORIGINS ||
+  "http://localhost:5173,http://localhost:3000"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
-    cors({ 
-        origin: "*",
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-    })
+  cors({
+    origin(origin, callback) {
+      // Allow requests without an Origin header, such as curl/Postman.
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
 
 // Middleware to parse JSON requests
