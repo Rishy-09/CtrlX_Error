@@ -8,7 +8,14 @@ const protect = async (req, res, next) => {
             if (token && token.startsWith("Bearer")) {
                 token = token.split(" ")[1]; // [1] to get the token part
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                req.user = await User.findById(decoded.id).select("-password"); // Exclude password from the user object
+                const user = await User.findById(decoded.id).select("-password");
+                if (!user) {
+                    return res.status(401).json({
+                        message: "Not authorized, user no longer exists",
+                    });
+                }
+
+                req.user = user; // Exclude password from the user object
                 next(); // Proceed to the next middleware or route handler
             }
             else {

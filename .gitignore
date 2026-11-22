@@ -1,2 +1,6 @@
 node_modules/
 .env
+
+# Runtime uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
